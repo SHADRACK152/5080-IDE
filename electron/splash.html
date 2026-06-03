@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5080 IDE</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 500px;
+      height: 340px;
+      background: transparent;
+      overflow: hidden;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
+    .splash {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 40%, #1e0808 80%, #2d0a0a 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(122, 42, 42, 0.5);
+      box-shadow:
+        0 0 60px rgba(122, 42, 42, 0.3),
+        0 0 120px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Glow orb background */
+    .splash::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(122, 42, 42, 0.2) 0%, transparent 70%);
+      animation: pulse 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .splash::after {
+      content: '';
+      position: absolute;
+      bottom: -80px;
+      right: -50px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(200, 60, 60, 0.08) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite reverse;
+      pointer-events: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+    }
+
+    /* Logo area */
+    .logo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      animation: fadeSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      animation-delay: 0.1s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #7a2a2a, #c0392b, #e74c3c);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 0 30px rgba(122, 42, 42, 0.6),
+        0 8px 24px rgba(0, 0, 0, 0.4);
+      font-size: 36px;
+      font-weight: 900;
+      color: white;
+      letter-spacing: -2px;
+      font-family: 'Segoe UI', sans-serif;
+      position: relative;
+    }
+
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .logo-name {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .logo-name span {
+      color: #e74c3c;
+    }
+
+    .logo-tagline {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    /* Progress bar area */
+    .progress-container {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      animation: fadeSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      animation-delay: 0.35s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7a2a2a, #e74c3c, #ff6b6b);
+      border-radius: 2px;
+      animation: loadProgress 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      box-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
+    }
+
+    @keyframes loadProgress {
+      0% { width: 0%; }
+      30% { width: 35%; }
+      60% { width: 65%; }
+      85% { width: 88%; }
+      100% { width: 100%; }
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.5px;
+      animation: textCycle 2.5s steps(1) forwards;
+    }
+
+    @keyframes textCycle {
+      0% { content: 'Initializing core engine...'; }
+    }
+
+    .status-dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(231, 76, 60, 0.6);
+      animation: dotBlink 1.2s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dotBlink {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Version badge */
+    .version {
+      position: absolute;
+      bottom: 18px;
+      right: 20px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.2);
+      letter-spacing: 1px;
+      font-weight: 500;
+    }
+
+    .powered {
+      position: absolute;
+      bottom: 18px;
+      left: 20px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.2);
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <div class="logo-container">
+      <div class="logo-icon">50<span style="font-size:28px;opacity:0.8">80</span></div>
+      <div class="logo-text">
+        <div class="logo-name"><span>5080</span> IDE</div>
+        <div class="logo-tagline">High-Performance Code Editor</div>
+      </div>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-track">
+        <div class="progress-bar"></div>
+      </div>
+      <div class="status-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="progress-label" id="status-label">Initializing workspace engine...</div>
+    </div>
+
+    <div class="version">v1.4.2</div>
+    <div class="powered">Electron + Monaco</div>
+  </div>
+
+  <script>
+    const labels = [
+      "Initializing workspace engine...",
+      "Loading PieceTree core...",
+      "Mounting filesystem APIs...",
+      "Starting embedded server...",
+      "Preparing editor workspace...",
+      "Almost ready...",
+    ];
+    const el = document.getElementById('status-label');
+    let i = 0;
+    const interval = setInterval(() => {
+      i = (i + 1) % labels.length;
+      el.textContent = labels[i];
+      if (i === labels.length - 1) clearInterval(interval);
+    }, 420);
+  </script>
+</body>
+</html>

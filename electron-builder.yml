@@ -1,0 +1,56 @@
+appId: com.5080ide.app
+productName: "5080 IDE"
+copyright: "Copyright © 2025 5080 IDE"
+
+directories:
+  output: release
+  buildResources: electron/resources
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+
+extraResources:
+  - from: electron/splash.html
+    to: splash.html
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: electron/resources/icon.ico
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  installerIcon: electron/resources/icon.ico
+  uninstallerIcon: electron/resources/icon.ico
+  installerHeaderIcon: electron/resources/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "5080 IDE"
+  include: "build/installer.nsh"
+  runAfterFinish: true
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: electron/resources/icon.icns
+  category: public.app-category.developer-tools
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: electron/resources/icon.png
+  category: Development
+
+compression: maximum
+removePackageScripts: true

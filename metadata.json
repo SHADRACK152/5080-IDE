@@ -1,0 +1,6 @@
+{
+  "name": "5080 IDE",
+  "description": "A fully functional Visual Studio Code-inspired development environment with workspace file exploration, full terminal integration, fuzzy searching, and Gemini AI copilot sidekick.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
