@@ -1,325 +1,262 @@
-# ⚡ 5080 IDE — The Next-Generation AI Developer Workspace
-
 <div align="center">
 
-<img src="./assets/banner.png" alt="5080 IDE Banner" width="100%"/>
+<img src="./assets/banner.png" width="100%" />
+
+# ⚡ 5080 IDE
+
+### **The Next-Generation AI Development Environment**
+
+<img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=600&size=24&duration=3000&pause=1000&color=7A2A2A&center=true&vCenter=true&width=800&lines=Monaco+Powered+Code+Editor;Electron+Desktop+Experience;Goldman+AI+Integrated;Built+for+Modern+Developers" />
 
 <br/>
 
-### **A High-Performance, AI-Powered Development Environment Inspired by VS Code**
-
-**Built with Monaco • Electron • React • TypeScript • Gemini AI**
-
 <p align="center">
 
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react\&logoColor=white)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite\&logoColor=white)](https://vite.dev/)
-[![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron\&logoColor=white)](https://www.electronjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
-[![Monaco](https://img.shields.io/badge/Monaco-Editor-007ACC?logo=visualstudiocode\&logoColor=white)](https://microsoft.github.io/monaco-editor/)
-[![Gemini](https://img.shields.io/badge/Goldman-AI%20Copilot-8E75B7)](https://ai.google.dev/)
-[![License](https://img.shields.io/badge/License-MIT-success)](#license)
+<img src="https://img.shields.io/badge/Version-v1.4.2-7A2A2A?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Status-Active-success?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Built%20With-React%20%2B%20Electron-blue?style=for-the-badge" />
 
 </p>
 
 <p align="center">
 
-🚀 **Monaco Code Editor** • 🤖 **Goldman AI Copilot** • 🖥️ **Electron Desktop App** • 📦 **Project Scaffolding** • 🌙 **Advanced Themes** • ⚡ **Integrated Terminal**
+<a href="https://react.dev">
+<img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white&style=flat-square"/>
+</a>
+
+<a href="https://vite.dev">
+<img src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white&style=flat-square"/>
+</a>
+
+<a href="https://www.electronjs.org/">
+<img src="https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white&style=flat-square"/>
+</a>
+
+<a href="https://www.typescriptlang.org/">
+<img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white&style=flat-square"/>
+</a>
+
+<img src="https://img.shields.io/badge/Monaco-Editor-007ACC?logo=visualstudiocode&logoColor=white&style=flat-square"/>
+
+<img src="https://img.shields.io/badge/Goldman-AI%20Copilot-8E75B7?style=flat-square"/>
 
 </p>
+
+---
+
+### 🚀 **A Premium VS Code-Inspired Workspace for Modern Developers**
+
+**5080 IDE** is a futuristic, AI-powered development environment designed for developers who want **speed, beauty, flexibility, and intelligence** in one workspace.
+
+Built using **Electron + React + Monaco Editor + Express + Gemini AI**, 5080 IDE delivers a modern coding experience with a beautiful interface, powerful tools, and premium customization.
+
+---
+
+<img src="./docs/screenshots/editor-preview.gif" width="95%" />
+
+### ⚡ **Built for Productivity**
+
+🧠 AI Coding Assistant
+⚡ Monaco Code Editor
+🖥️ Native Electron Desktop Experience
+📦 Smart Project Scaffolding
+🌍 Git Integration
+🎨 Premium Themes
+🗂️ Workspace Management
+💻 Integrated Terminal
 
 </div>
 
 ---
 
-# ✨ Overview
-
-**5080 IDE** is a modern, premium, high-performance developer environment inspired by the familiarity of **VS Code**, but redesigned with a futuristic experience, powerful customization, AI integration, and native desktop performance.
-
-Built using **React + Vite + Electron + Monaco Editor**, 5080 IDE delivers a smooth development experience with:
-
-* ⚡ **Lightning-fast Monaco editor**
-* 🤖 **Goldman AI coding assistant**
-* 🗂️ **Workspace & file management**
-* 🖥️ **Integrated terminal execution**
-* 🔍 **Workspace-wide search**
-* 🌍 **Git repository management**
-* 🎨 **Premium theme engine**
-* 📦 **Project scaffolding**
-* 🚀 **Cross-platform desktop packaging**
-
-Whether you're building **web apps, desktop apps, APIs, or AI systems**, 5080 IDE gives developers a beautiful and productive coding experience.
-
----
-
-# 🖼️ Preview
-
-## Welcome Experience
-
-<p align="center">
-<img src="./docs/screenshots/welcome-screen.png" width="90%">
-</p>
-
-> Beautiful onboarding experience with **workspace history**, **quick actions**, and **AI tips**.
-
----
-
-## Editor Workspace
-
-<p align="center">
-<img src="./docs/screenshots/editor-workspace.png" width="90%">
-</p>
-
-> Monaco-powered editor with tabs, syntax highlighting, themes, and lightning-fast editing.
-
----
-
-## Goldman AI Assistant
-
-<p align="center">
-<img src="./docs/screenshots/ai-panel.png" width="90%">
-</p>
-
-> Built-in AI copilot for explanations, debugging, refactoring, and test generation.
-
----
-
-## Terminal & Git Integration
-
-<p align="center">
-<img src="./docs/screenshots/terminal.png" width="90%">
-</p>
-
-> Run shell commands directly and inspect Git changes without leaving the IDE.
-
----
-
 # 🌟 Features
 
-## 🧠 Goldman AI Copilot
+<div align="center">
 
-Built-in AI coding assistant.
+| 🚀 Feature                 | 💡 Description                     |
+| -------------------------- | ---------------------------------- |
+| **⚡ Monaco Editor**        | Same editor engine used in VS Code |
+| **🤖 Goldman AI**          | AI copilot for coding assistance   |
+| **🗂 Workspace Manager**   | Open, manage & restore projects    |
+| **🌍 Git Support**         | Track repositories & status        |
+| **🔍 Smart Search**        | Workspace-wide text search         |
+| **🖥 Integrated Terminal** | Run commands directly inside IDE   |
+| **🎨 Advanced Themes**     | Multiple premium visual themes     |
+| **📦 Project Scaffolding** | Create React, Node & Python apps   |
 
-### Capabilities
-
-✅ Explain code
-✅ Refactor functions
-✅ Debug errors
-✅ Generate tests
-✅ Suggest improvements
-✅ Offline fallback mode when API key is unavailable
-
-```ts
-// Example prompt
-"Explain this React component"
-"Refactor this function"
-"Generate unit tests"
-```
+</div>
 
 ---
 
-## ⚡ Monaco Editor
+# 🖼️ IDE Preview
 
-Powered by the same editor engine used by **VS Code**.
+<div align="center">
 
-### Editor Features
+## 🏠 Welcome Screen
 
-* Smart syntax highlighting
-* Multi-language support
-* Dirty state tracking
-* Auto-save support
-* Fast text rendering
-* Cursor tracking
-* Advanced themes
-* Tabs & file switching
+<img src="./docs/screenshots/welcome-screen.png" width="90%" />
 
-Supported languages include:
-
-```txt
-TypeScript
-JavaScript
-Python
-HTML
-CSS
-JSON
-Markdown
-YAML
-Shell Scripts
-Plain Text
-```
+**Modern onboarding with quick actions, workspace history, and Goldman AI tips.**
 
 ---
 
-## 🎨 Premium Theme Engine
+## 💻 Editor Workspace
 
-5080 IDE ships with multiple stunning built-in themes.
+<img src="./docs/screenshots/editor-workspace.png" width="90%" />
 
-| Theme                     | Style          |
-| ------------------------- | -------------- |
-| 🌑 Classic Obsidian Rouge | Premium Dark   |
-| ☀️ Classic Studio Light   | Clean Light    |
-| ❄️ Nordic Frost Arctic    | Elegant Cool   |
-| 🦇 Dracula Eclipse        | Developer Dark |
-| 🌆 Cyberpunk Neon         | Futuristic     |
-| 👑 Luxury Amber Gold      | Premium Gold   |
-
-Custom theme creation is also supported.
+**Monaco-powered coding experience with tabs, syntax highlighting, themes, and performance optimizations.**
 
 ---
 
-## 🗂️ Smart Workspace Management
+## 🤖 Goldman AI Assistant
 
-Manage projects like a professional IDE.
+<img src="./docs/screenshots/ai-panel.png" width="90%" />
 
-### Workspace Features
-
-* Open local folders
-* Recent workspace history
-* Workspace restoration
-* File explorer
-* Create/Delete/Rename files
-* New project creation
-* Git repository cloning
-
----
-
-## 📦 Project Scaffolding
-
-Quickly bootstrap projects.
-
-Supported templates:
-
-```txt
-React
-Node.js
-Python
-TypeScript
-Starter Templates
-```
-
-Create projects in seconds.
-
----
-
-## 🔍 Global Search Engine
-
-Search text across your entire workspace instantly.
-
-Capabilities:
-
-* File-wide search
-* Workspace search
-* Fast indexing
-* Match previews
-
----
-
-## 🌍 Git Integration
-
-Built-in Git awareness.
-
-Features:
-
-* Git status detection
-* Branch monitoring
-* Change tracking
-* Repository cloning
+**Explain code, debug issues, refactor functions, and generate tests instantly.**
 
 ---
 
 ## 🖥️ Integrated Terminal
 
-Run commands without leaving the editor.
+<img src="./docs/screenshots/terminal-preview.png" width="90%" />
 
-```bash
-npm install
-npm run dev
-git status
-python app.py
+**Run shell commands without leaving your workspace.**
+
+</div>
+
+---
+
+# 🧠 Goldman AI Copilot
+
+<div align="center">
+
+<img src="./assets/ai-banner.png" width="100%" />
+
+### **Your Built-In Coding Assistant**
+
+</div>
+
+Goldman AI is deeply integrated into **5080 IDE** and helps developers work faster.
+
+### ✨ What Goldman Can Do
+
+```txt
+✔ Explain complex code
+✔ Debug errors
+✔ Generate test files
+✔ Refactor functions
+✔ Suggest optimizations
+✔ Generate boilerplate
+✔ Assist with architecture
 ```
 
-Supports available system shells automatically.
+### Example Prompt
+
+```ts
+Explain this React component
+
+Refactor this function
+
+Generate tests for this file
+```
 
 ---
 
-## 🔐 User Profiles
+# 🎨 Premium Theme System
 
-Developer profile support includes:
+5080 IDE includes beautiful built-in themes inspired by modern developer environments.
 
-* Personalized settings
-* Workspace persistence
-* Statistics tracking
-* Productivity metrics
+<div align="center">
 
-Tracked stats:
+| Theme              | Preview                 |
+| ------------------ | ----------------------- |
+| 🌑 Obsidian Rouge  | Premium dark aesthetic  |
+| ☀️ Studio Light    | Minimal clean workspace |
+| ❄️ Nordic Frost    | Arctic coding feel      |
+| 🦇 Dracula Eclipse | Developer classic       |
+| 🌆 Cyberpunk Neon  | Futuristic glow         |
+| 👑 Luxury Gold     | Elite premium style     |
 
-* Files saved
-* Commits
-* Errors fixed
-* Active coding hours
-* Lines of code
+</div>
+
+Supports:
+
+```txt
+✔ Dynamic Theme Switching
+✔ Theme Persistence
+✔ Custom Theme Creation
+✔ Monaco Theme Sync
+✔ UI Color Synchronization
+```
 
 ---
 
-# 🏗️ Architecture
+# 🏗️ System Architecture
 
-```text
+<div align="center">
+
+```txt
 ┌──────────────────────────────────────────────┐
-│               Electron Shell                 │
-│  Native dialogs • IPC • Menus • Windowing   │
+│               Electron Desktop               │
+│ Windows • IPC • Native APIs • Menus          │
 └────────────────┬─────────────────────────────┘
                  │
                  ▼
 ┌──────────────────────────────────────────────┐
-│            React + Vite Renderer             │
-│ Editor • Sidebar • AI • Terminal • Themes   │
+│              React + Monaco UI               │
+│ Sidebar • Editor • AI • Terminal             │
 └────────────────┬─────────────────────────────┘
                  │
                  ▼
 ┌──────────────────────────────────────────────┐
-│               Express API Server             │
-│ Files • Search • Git • Terminal • AI        │
+│              Express API Layer               │
+│ Files • Search • Git • Terminal • AI         │
 └────────────────┬─────────────────────────────┘
                  │
                  ▼
 ┌──────────────────────────────────────────────┐
-│               Local Workspace                │
-│ Project files • Git • Packages • Shell      │
+│             Local Developer Files            │
+│ Workspace • Packages • Projects              │
 └──────────────────────────────────────────────┘
 ```
+
+</div>
 
 ---
 
 # 🛠️ Tech Stack
 
-| Layer     | Technology           |
-| --------- | -------------------- |
-| Frontend  | React 19             |
-| Language  | TypeScript           |
-| Bundler   | Vite 6               |
-| Desktop   | Electron 36          |
-| Editor    | Monaco Editor        |
-| Styling   | Tailwind CSS 4       |
-| Backend   | Express.js           |
-| AI        | Google Gemini        |
-| Animation | Motion               |
-| Icons     | Lucide React         |
-| Native    | Node Addon API / C++ |
+<div align="center">
+
+| Category               | Technology            |
+| ---------------------- | --------------------- |
+| **Frontend**           | React 19 + TypeScript |
+| **Build Tool**         | Vite 6                |
+| **Desktop**            | Electron 36           |
+| **Editor Engine**      | Monaco Editor         |
+| **Backend**            | Express.js            |
+| **AI Integration**     | Gemini API            |
+| **Animations**         | Motion                |
+| **Icons**              | Lucide React          |
+| **Styling**            | Tailwind CSS          |
+| **Native Experiments** | C++ / Node Addon API  |
+
+</div>
 
 ---
 
 # 🚀 Getting Started
 
-## 1. Clone the Repository
+## Clone Repository
 
 ```bash
-git clone https://github.com/your-username/5080-IDE.git
+git clone https://github.com/YOUR_USERNAME/5080-IDE.git
 cd 5080-IDE
 ```
 
 ---
 
-## 2. Install Dependencies
+## Install Dependencies
 
 ```bash
 npm install
@@ -327,7 +264,7 @@ npm install
 
 ---
 
-## 3. Configure Environment
+## Configure Environment
 
 Create:
 
@@ -344,7 +281,7 @@ APP_URL=http://localhost:3000
 
 ---
 
-## 4. Start Development
+## Start Development
 
 ### Browser Mode
 
@@ -360,7 +297,7 @@ http://localhost:3000
 
 ---
 
-### Electron Desktop Mode
+### Electron Desktop
 
 ```bash
 npm run build:electron
@@ -369,21 +306,7 @@ npm run electron:dev
 
 ---
 
-# 📜 Scripts
-
-| Command                  | Purpose                    |
-| ------------------------ | -------------------------- |
-| `npm run dev`            | Start development server   |
-| `npm run build`          | Production build           |
-| `npm run lint`           | Run TypeScript checks      |
-| `npm run electron:dev`   | Launch Electron in dev     |
-| `npm run electron:build` | Full packaged build        |
-| `npm run electron:dist`  | Generate release artifacts |
-| `npm run clean`          | Remove build output        |
-
----
-
-# 📁 Project Structure
+# 📂 Project Structure
 
 ```txt
 5080-IDE/
@@ -409,84 +332,81 @@ npm run electron:dev
 
 ---
 
-# 🔥 Why 5080 IDE?
+# 📜 Available Scripts
 
-### Traditional Editors
-
-❌ Limited customization
-❌ No integrated AI
-❌ Basic workspace management
-
-### 5080 IDE
-
-✅ Premium UX
-✅ Goldman AI built-in
-✅ Beautiful themes
-✅ Desktop + browser support
-✅ Terminal + Git + Search
-✅ Modern workspace experience
+| Command                  | Description           |
+| ------------------------ | --------------------- |
+| `npm run dev`            | Start local server    |
+| `npm run build`          | Production build      |
+| `npm run electron:dev`   | Electron dev mode     |
+| `npm run electron:build` | Package desktop app   |
+| `npm run electron:dist`  | Generate installers   |
+| `npm run lint`           | Run TypeScript checks |
 
 ---
 
-# 🧪 Roadmap
+# 🧪 Development Roadmap
 
-* [x] Monaco Editor
-* [x] Workspace Explorer
-* [x] Goldman AI
-* [x] Integrated Terminal
-* [x] Git Status
-* [x] Theme System
-* [x] Electron Packaging
-* [ ] Plugin Marketplace
-* [ ] Cloud Sync
-* [ ] AI Pair Programming
-* [ ] Real-time Collaboration
-* [ ] Extension SDK
+```txt
+✅ Monaco Editor
+✅ Workspace Explorer
+✅ Goldman AI
+✅ Theme System
+✅ Git Integration
+✅ Terminal Support
+✅ Electron Packaging
+⬜ Extension Marketplace
+⬜ Cloud Sync
+⬜ Live Collaboration
+⬜ AI Pair Programming
+⬜ Plugin SDK
+```
 
 ---
 
 # 🤝 Contributing
 
-Contributions are welcome.
-
-### Steps
+Want to improve **5080 IDE**?
 
 ```bash
-1. Fork the repository
-2. Create your branch
-3. Make changes
-4. Commit changes
-5. Push branch
-6. Open Pull Request
+# Fork repository
+# Create feature branch
+git checkout -b feature/amazing-feature
+
+# Commit changes
+git commit -m "Added amazing feature"
+
+# Push branch
+git push origin feature/amazing-feature
 ```
 
----
-
-# 🔒 Security Notice
-
-5080 IDE has access to:
-
-* File creation
-* File deletion
-* Terminal execution
-* Workspace modifications
-
-Only use trusted projects and avoid exposing the server publicly without authentication.
+Open a Pull Request 🚀
 
 ---
 
-# 📄 License
+# 🔐 Security Notice
 
-This project is licensed under the **MIT License**.
+5080 IDE can:
+
+* Create files
+* Delete files
+* Execute terminal commands
+* Modify project workspaces
+
+Always use trusted environments and avoid exposing the server publicly.
 
 ---
 
 <div align="center">
 
-### ⚡ 5080 IDE
+# ⚡ 5080 IDE
 
-**Build Faster. Code Smarter. Think Bigger.**
+### **Build Faster. Code Smarter. Ship Better.**
 
-Made with ❤️ by the **5080 IDE Team**
+<img src="https://komarev.com/ghpvc/?username=YOUR_USERNAME&label=Project+Views&color=7a2a2a&style=for-the-badge" />
+
+### ⭐ Star this repository if you like the project!
+
+Made with ❤️ for developers.
 
 </div>
