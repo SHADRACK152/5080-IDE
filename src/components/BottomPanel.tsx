@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Terminal, AlertCircle, ListCollapse, Play, Square, Trash2, Maximize2, Minimize2, X } from "lucide-react";
+import { Terminal, AlertCircle, ListCollapse, Play, Square, Trash2, Maximize2, Minimize2, X, Plus, Columns, ChevronDown, Activity, Globe, Bug } from "lucide-react";
 import { Problem } from "../types";
 
 interface BottomPanelProps {
@@ -15,6 +15,7 @@ interface BottomPanelProps {
   workspacePath?: string;
   onApplyLintFix?: () => void;
   position?: "bottom" | "right";
+  onRefreshWorkspace?: () => void;
 }
 
 export default function BottomPanel({
@@ -27,17 +28,21 @@ export default function BottomPanel({
   onTabChange,
   outputLogs,
   onClearOutput,
-  workspacePath = "/workspace",
+  workspacePath,
   onApplyLintFix,
   position = "bottom",
+  onRefreshWorkspace,
 }: BottomPanelProps) {
   const [terminalInput, setTerminalInput] = useState("");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>([
-    "\x1b[1;32mWelcome to 5080 IDE Interactive Container Shell!\x1b[0m",
-    "Run standard commands directly in your container workspace virtual terminal.",
-    "Try: \x1b[1;36mnpm run lint\x1b[0m, \x1b[1;36mcat package.json\x1b[0m, or \x1b[1;36mls -la\x1b[0m",
-    ""
-  ]);
+  
+  // Format the prompt dynamically based on the active workspace path
+  const promptString = (() => {
+    if (workspacePath) {
+      return `PS ${workspacePath.replace(/\//g, "\\")}>`;
+    }
+    return "PS C:\\Users\\Admin mtkenyanews\\Documents\\5080-ide>";
+  })();
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const [isCommandRunning, setIsCommandRunning] = useState(false);
   const [currentCommand, setCurrentCommand] = useState<string | null>(null);
   const [terminalHistory, setTerminalHistory] = useState<string[]>([]);
@@ -45,9 +50,29 @@ export default function BottomPanel({
   const [isExpanded, setIsExpanded] = useState(false);
   const [availableShells, setAvailableShells] = useState<{ name: string; path: string }[]>([]);
   const [selectedShell, setSelectedShell] = useState<string>("");
+  
+  // Custom VS Code layout additions
+  const [localTab, setLocalTab] = useState<string>("terminal");
+  const [activeTerminals, setActiveTerminals] = useState<{ id: string; name: string; active: boolean }[]>([
+    { id: "1", name: "1: powershell", active: true },
+    { id: "2", name: "2: node dev server", active: false }
+  ]);
 
   const consoleEndRef = useRef<HTMLDivElement>(null);
   const terminalInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (activeTab) {
+      setLocalTab(activeTab);
+    }
+  }, [activeTab]);
+
+  const handleTabClick = (tabId: string) => {
+    setLocalTab(tabId);
+    if (tabId === "problems" || tabId === "output" || tabId === "terminal") {
+      onTabChange(tabId as any);
+    }
+  };
 
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -165,6 +190,9 @@ export default function BottomPanel({
     } finally {
       setIsCommandRunning(false);
       setCurrentCommand(null);
+      if (onRefreshWorkspace) {
+        onRefreshWorkspace();
+      }
     }
   };
 
@@ -256,23 +284,11 @@ export default function BottomPanel({
 
       {/* Tab select headers */}
       <div className="h-9 bg-[#2D2D2D] border-b border-[#1E1E1E] flex items-center justify-between px-3 select-none text-[12px] shrink-0">
-        <div className="flex items-center gap-1.5 h-full">
+        <div className="flex items-center gap-0.5 h-full">
           <button
-            onClick={() => onTabChange("terminal")}
+            onClick={() => handleTabClick("problems")}
             className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
-              activeTab === "terminal"
-                ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
-                : "border-transparent text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Terminal</span>
-          </button>
-
-          <button
-            onClick={() => onTabChange("problems")}
-            className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
-              activeTab === "problems"
+              localTab === "problems"
                 ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
                 : "border-transparent text-gray-400 hover:text-gray-200"
             }`}
@@ -287,21 +303,69 @@ export default function BottomPanel({
           </button>
 
           <button
-            onClick={() => onTabChange("output")}
+            onClick={() => handleTabClick("output")}
             className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
-              activeTab === "output"
+              localTab === "output"
                 ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
                 : "border-transparent text-gray-400 hover:text-gray-200"
             }`}
           >
             <ListCollapse className="w-3.5 h-3.5" />
-            <span>System Output</span>
+            <span>Output</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick("debug-console")}
+            className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
+              localTab === "debug-console"
+                ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
+                : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            <span>Debug Console</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick("terminal")}
+            className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
+              localTab === "terminal"
+                ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
+                : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            <Terminal className="w-3.5 h-3.5" />
+            <span>Terminal</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick("ports")}
+            className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
+              localTab === "ports"
+                ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
+                : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Ports</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick("query-results")}
+            className={`flex items-center gap-1.5 px-3 h-full border-b transition-colors cursor-pointer text-xs ${
+              localTab === "query-results"
+                ? "border-[#7A2A2A] text-white bg-[#1e1e1e] font-semibold"
+                : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            <ListCollapse className="w-3.5 h-3.5" />
+            <span>Query Results</span>
           </button>
         </div>
 
         {/* Tab-specific tool buttons */}
         <div className="flex items-center gap-2">
-          {activeTab === "terminal" && (
+          {localTab === "terminal" && (
             <div className="flex items-center gap-2 mr-1">
               {availableShells.length > 0 && (
                 <select
@@ -335,7 +399,7 @@ export default function BottomPanel({
             </div>
           )}
 
-          {activeTab === "output" && (
+          {localTab === "output" && (
             <button
               onClick={onClearOutput}
               className="text-gray-400 hover:text-white hover:bg-white/5 p-1 rounded transition-colors cursor-pointer"
@@ -371,61 +435,128 @@ export default function BottomPanel({
 
       {/* Main Panel Content Container */}
       <div className="flex-1 flex flex-col min-h-0 bg-[#1e1e1e] p-3 text-gray-300 font-mono text-[13px] leading-relaxed select-text">
-        {activeTab === "terminal" && (
-          <div 
-            onClick={() => terminalInputRef.current?.focus()}
-            className="flex-1 flex flex-col min-h-0 font-mono cursor-text"
-          >
-            <div className="flex-1 overflow-auto space-y-1 pr-1 font-mono">
-              {terminalOutput.map((line, idx) => (
-                <div key={idx} className="whitespace-pre-wrap leading-5 select-text font-mono min-h-[1.25rem]">
-                  {parseAnsiColors(line)}
+        {localTab === "terminal" && (
+          <div className="flex-1 flex min-h-0 font-mono">
+            {/* Left: Terminal Output & Interactive Prompt */}
+            <div 
+              onClick={() => terminalInputRef.current?.focus()}
+              className="flex-1 flex flex-col min-h-0 font-mono cursor-text pr-2"
+            >
+              <div className="flex-1 overflow-auto space-y-1 pr-1 font-mono">
+                {terminalOutput.map((line, idx) => (
+                  <div key={idx} className="whitespace-pre-wrap leading-5 select-text font-mono min-h-[1.25rem]">
+                    {parseAnsiColors(line)}
+                  </div>
+                ))}
+                
+                {/* Terminal interactive prompt inline in the scrollable view */}
+                <div className="flex items-center gap-1.5 py-1 select-none text-[13px] shrink-0 font-mono">
+                  <span className="text-zinc-300 font-mono select-none font-medium">{promptString}</span>
+                  <input
+                    ref={terminalInputRef}
+                    type="text"
+                    value={terminalInput}
+                    onChange={(e) => setTerminalInput(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="flex-1 bg-transparent text-white outline-none font-mono tracking-wide selection:bg-gray-700 min-w-0"
+                    placeholder={isCommandRunning ? "Command executing..." : "Type command and hit Enter..."}
+                    disabled={isCommandRunning}
+                    autoFocus
+                  />
+                  {isCommandRunning && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Force terminate - handled gracefully on server-process completion
+                        setIsCommandRunning(false);
+                        setTerminalOutput(prev => [...prev, "\x1b[1;31mSIGINT (KeyboardInterrupt) initiated locally.\x1b[0m"]);
+                      }}
+                      className="flex items-center gap-1.5 bg-red-800 text-red-100 hover:bg-red-700 font-sans text-xs px-2 py-0.5 rounded cursor-pointer transition-colors"
+                    >
+                      <Square className="w-2.5 h-2.5 fill-white" />
+                      <span>Kill</span>
+                    </button>
+                  )}
                 </div>
-              ))}
-              
-              {/* Terminal interactive prompt inline in the scrollable view */}
-              <div className="flex items-center gap-2 py-1 select-none text-[13px] shrink-0 font-mono">
-                <span className="text-emerald-400 font-bold tracking-normal font-mono select-none">root@develop-container:~$</span>
-                <input
-                  ref={terminalInputRef}
-                  type="text"
-                  value={terminalInput}
-                  onChange={(e) => setTerminalInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  className="flex-1 bg-transparent text-white outline-none font-mono tracking-wide selection:bg-gray-700 min-w-0"
-                  placeholder={isCommandRunning ? "Command executing..." : "Type command and hit Enter..."}
-                  disabled={isCommandRunning}
-                  autoFocus
-                />
-                {isCommandRunning && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Force terminate - handled gracefully on server-process completion
-                      setIsCommandRunning(false);
-                      setTerminalOutput(prev => [...prev, "\x1b[1;31mSIGINT (KeyboardInterrupt) initiated locally.\x1b[0m"]);
-                    }}
-                    className="flex items-center gap-1.5 bg-red-800 text-red-100 hover:bg-red-700 font-sans text-xs px-2 py-0.5 rounded cursor-pointer transition-colors"
-                  >
-                    <Square className="w-2.5 h-2.5 fill-white" />
-                    <span>Kill</span>
-                  </button>
-                )}
-              </div>
 
-              {isCommandRunning && (
-                <div className="flex items-center gap-2 text-cyan-400 blink py-0.5 font-semibold font-mono animate-pulse">
-                  <Play className="w-3 h-3 fill-cyan-400 animate-spin" />
-                  <span>Streaming output...</span>
+                {isCommandRunning && (
+                  <div className="flex items-center gap-2 text-cyan-400 blink py-0.5 font-semibold font-mono animate-pulse">
+                    <Play className="w-3 h-3 fill-cyan-400 animate-spin" />
+                    <span>Streaming output...</span>
+                  </div>
+                )}
+                <div ref={consoleEndRef} />
+              </div>
+            </div>
+
+            {/* Right: Active Shells Process Column */}
+            <div className="w-48 border-l border-[#010a0e]/65 flex flex-col pl-2 select-none shrink-0 font-sans text-xs bg-[#03171e]/30">
+              <div className="flex items-center justify-between py-1 border-b border-[#010a0e]/40 pr-1">
+                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Active Shells</span>
+                <div className="flex items-center gap-1 text-zinc-400">
+                  <button 
+                    onClick={() => {
+                      const newId = (activeTerminals.length + 1).toString();
+                      setActiveTerminals(prev => [...prev, { id: newId, name: `${newId}: powershell`, active: false }]);
+                      setTerminalOutput(prev => [...prev, `\x1b[1;32mOpened new terminal session [Session ${newId}].\x1b[0m`]);
+                    }}
+                    className="hover:text-white p-0.5 hover:bg-neutral-800 rounded transition-colors"
+                    title="New Terminal"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    className="hover:text-white p-0.5 hover:bg-neutral-800 rounded transition-colors" 
+                    title="Split Terminal"
+                  >
+                    <Columns className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (activeTerminals.length > 1) {
+                        const activeIndex = activeTerminals.findIndex(t => t.active);
+                        const toKill = activeTerminals[activeIndex >= 0 ? activeIndex : 0];
+                        setActiveTerminals(prev => {
+                          const next = prev.filter(t => t.id !== toKill.id);
+                          next[0].active = true;
+                          return next;
+                        });
+                        setTerminalOutput(prev => [...prev, `\x1b[1;31mTerminated session [Session ${toKill.id}].\x1b[0m`]);
+                      } else {
+                        setTerminalOutput(prev => [...prev, `\x1b[1;31mCannot terminate the primary shell.\x1b[0m`]);
+                      }
+                    }}
+                    className="hover:text-red-400 p-0.5 hover:bg-neutral-800 rounded transition-colors" 
+                    title="Kill Terminal"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              )}
-              <div ref={consoleEndRef} />
+              </div>
+              <div className="flex-1 overflow-auto py-1.5 space-y-1">
+                {activeTerminals.map(term => (
+                  <div
+                    key={term.id}
+                    onClick={() => {
+                      setActiveTerminals(prev => prev.map(t => ({ ...t, active: t.id === term.id })));
+                    }}
+                    className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer transition-all ${
+                      term.active 
+                        ? "bg-[#0ea5e9]/10 text-[#0ea5e9] border-l-2 border-[#0ea5e9]" 
+                        : "hover:bg-neutral-900/40 text-zinc-400"
+                    }`}
+                  >
+                    <Terminal className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate font-sans font-medium text-[11px]">{term.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {activeTab === "problems" && (
+        {localTab === "problems" && (
           <div className="space-y-2 font-sans text-[12px] h-full overflow-auto">
             {problems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-gray-500 text-[13px] select-none h-full">
@@ -463,7 +594,7 @@ export default function BottomPanel({
           </div>
         )}
 
-        {activeTab === "output" && (
+        {localTab === "output" && (
           <div className="space-y-1 font-mono text-[12.5px] whitespace-pre-wrap select-text selection:bg-gray-700 h-full overflow-auto leading-6">
             {outputLogs.length === 0 ? (
               <span className="text-gray-500 select-none">[System Idle] Listening for codebase diagnostic audits and write operations...</span>
@@ -475,6 +606,35 @@ export default function BottomPanel({
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {localTab === "debug-console" && (
+          <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 font-sans text-xs select-none">
+            <Activity className="w-8 h-8 text-neutral-600 mb-2 animate-pulse" />
+            <span>No active debug sessions. Press F5 to start.</span>
+          </div>
+        )}
+
+        {localTab === "ports" && (
+          <div className="flex-1 overflow-auto font-sans text-[12px] p-2 space-y-3">
+            <div className="text-zinc-400 font-bold border-b border-[#010a0e]/40 pb-1 mb-2 uppercase text-[10px] tracking-wider">Forwarded Ports</div>
+            <div className="flex items-center justify-between bg-[#0ea5e9]/5 border border-[#0ea5e9]/20 p-2 rounded max-w-md">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-[#0ea5e9]" />
+                <span className="font-semibold text-zinc-200">Port 3000</span>
+                <span className="text-zinc-500">→</span>
+                <span className="text-sky-400 font-mono">http://localhost:3000</span>
+              </div>
+              <span className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Active</span>
+            </div>
+            <div className="text-zinc-500 text-[11px] italic">Forwarded ports allow previewing web interfaces directly from the container environment.</div>
+          </div>
+        )}
+
+        {localTab === "query-results" && (
+          <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 font-sans text-xs select-none">
+            <span>No database query executions found. Use SQL files to perform DB query operations.</span>
           </div>
         )}
       </div>

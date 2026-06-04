@@ -39,6 +39,11 @@ export default function PackagesTab() {
   const [isCommandRunning, setIsCommandRunning] = useState(false);
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
+  // Virtual environment states
+  const [hasVenv, setHasVenv] = useState(false);
+  const [relativePipPath, setRelativePipPath] = useState("pip");
+  const [createVenvCommand, setCreateVenvCommand] = useState("python -m venv .venv");
+
   // Load installed packages on start
   const fetchInstalledPackages = async () => {
     setIsLoadingList(true);
@@ -48,6 +53,14 @@ export default function PackagesTab() {
         const data = await response.json();
         setInstalledNpm(data.npm || []);
         setInstalledPip(data.python || []);
+      }
+
+      const envResponse = await fetch("/api/packages/env");
+      if (envResponse.ok) {
+        const envData = await envResponse.json();
+        setHasVenv(envData.hasVenv);
+        setRelativePipPath(envData.relativePipPath || "pip");
+        setCreateVenvCommand(envData.createVenvCommand || "python -m venv .venv");
       }
     } catch (err) {
       console.error("Failed to load packages list:", err);
@@ -158,7 +171,7 @@ export default function PackagesTab() {
       if (npmSaveType === "global") saveFlag = "-g";
       cmd = `npm install ${pkg.name} ${saveFlag}`;
     } else {
-      cmd = `pip install ${pkg.name}`;
+      cmd = `${relativePipPath} install ${pkg.name}`;
     }
     executePackageCommand(cmd, `Successfully installed package ${pkg.name}`);
     setSelectedRegistryPackage(null);
@@ -170,7 +183,7 @@ export default function PackagesTab() {
     if (activeTab === "npm") {
       cmd = `npm uninstall ${pkgName}`;
     } else {
-      cmd = `pip uninstall -y ${pkgName}`;
+      cmd = `${relativePipPath} uninstall -y ${pkgName}`;
     }
     executePackageCommand(cmd, `Successfully uninstalled package ${pkgName}`);
   };
@@ -228,6 +241,32 @@ export default function PackagesTab() {
             Python (Pip)
           </button>
         </div>
+        {activeTab === "pip" && (
+          <div className="mt-3 flex flex-col gap-2">
+            {hasVenv ? (
+              <div className="flex items-center gap-1.5 bg-emerald-950/20 border border-emerald-900/40 p-2 rounded text-[11px] text-emerald-400">
+                <Check className="w-3.5 h-3.5" />
+                <span className="font-semibold">Local Virtual Env (.venv) Active</span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 bg-amber-950/20 border border-amber-900/40 p-2.5 rounded text-[11px] text-amber-400 leading-normal">
+                <div className="flex items-start gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <span>No local virtual environment (.venv) detected in this project. Packages will install globally.</span>
+                </div>
+                <button
+                  onClick={() => {
+                    executePackageCommand(createVenvCommand, "Successfully created Python Virtual Environment (.venv)");
+                  }}
+                  disabled={isCommandRunning}
+                  className="bg-amber-600 hover:bg-amber-500 text-black py-1 px-2 rounded font-bold text-[10px] tracking-wide cursor-pointer transition-colors text-center disabled:opacity-50 select-none"
+                >
+                  {isCommandRunning ? "Initializing Environment..." : "Create Virtual Environment (.venv)"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. Package Search Box */}

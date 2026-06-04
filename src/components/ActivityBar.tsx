@@ -1,8 +1,10 @@
-import { Files, Search, GitBranch, Cpu, Settings, User, Puzzle, Package } from "lucide-react";
+import { Files, Search, GitBranch, Cpu, Settings, User, Puzzle, Package, Bot } from "lucide-react";
+
+type SidebarTab = "explorer" | "search" | "git" | "gemini" | "agents" | "settings" | "extensions" | "profile" | "packages";
 
 interface ActivityBarProps {
-  activeTab: "explorer" | "search" | "git" | "gemini" | "settings" | "extensions" | "profile" | "packages";
-  onTabSelect: (tab: "explorer" | "search" | "git" | "gemini" | "settings" | "extensions" | "profile" | "packages") => void;
+  activeTab: SidebarTab;
+  onTabSelect: (tab: SidebarTab) => void;
   isVisible: boolean;
   onToggleVisible: () => void;
 }
@@ -17,7 +19,8 @@ export default function ActivityBar({
     { id: "explorer" as const, icon: Files, title: "Explorer (Ctrl+Shift+E)" },
     { id: "search" as const, icon: Search, title: "Fuzzy Code Search (Ctrl+Shift+F)" },
     { id: "git" as const, icon: GitBranch, title: "Source Code Version Status" },
-    { id: "gemini" as const, icon: Cpu, title: "Gemini Copilot Assistant Chat", highlight: true },
+    { id: "gemini" as const, icon: Cpu, title: "Goldman AI Copilot Chat", highlight: true },
+    { id: "agents" as const, icon: Bot, title: "AI Coding Agents", agentHighlight: true },
     { id: "packages" as const, icon: Package, title: "Dependency & Package Manager" },
     { id: "extensions" as const, icon: Puzzle, title: "Extensions & Themes Market (Ctrl+Shift+X)" },
   ];
@@ -49,18 +52,24 @@ export default function ActivityBar({
             >
               {/* Left active line indicator */}
               <div
-                className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-[#7A2A2A] transition-all duration-150 ${
-                  isActive ? "opacity-100 scale-y-100" : "opacity-0 scale-y-50 group-hover:opacity-40"
-                }`}
+                className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r transition-all duration-150 ${
+                  tab.agentHighlight ? "bg-violet-500" : "bg-[#7A2A2A]"
+                } ${isActive ? "opacity-100 scale-y-100" : "opacity-0 scale-y-50 group-hover:opacity-40"}`}
               />
 
               {/* Icon */}
               <IconComponent
                 className={`w-[22px] h-[22px] transition-colors relative ${
                   isActive
-                    ? tab.highlight ? "text-cyan-400" : "text-white"
-                     : tab.highlight
+                    ? tab.highlight
+                      ? "text-cyan-400"
+                      : tab.agentHighlight
+                      ? "text-violet-400"
+                      : "text-white"
+                    : tab.highlight
                     ? "text-cyan-500/80 group-hover:text-cyan-400"
+                    : tab.agentHighlight
+                    ? "text-violet-500/80 group-hover:text-violet-400"
                     : "text-gray-400 group-hover:text-gray-200"
                 }`}
               />
@@ -68,6 +77,10 @@ export default function ActivityBar({
               {/* Glowing ring for AI Copilot */}
               {tab.highlight && (
                 <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyan-400 animate-ping opacity-75" />
+              )}
+              {/* Pulsing ring for Agents */}
+              {tab.agentHighlight && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-violet-500 animate-pulse opacity-80" />
               )}
             </button>
           );

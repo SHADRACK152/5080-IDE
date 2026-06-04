@@ -19,6 +19,36 @@ export interface EditorTab {
   language: string;
 }
 
+// ── AI / LLM Provider Types ────────────────────────────────────────────────
+export type LLMProvider = "gemini" | "openai" | "claude" | "grok";
+
+export interface AIProviderKeys {
+  gemini?: string;
+  openai?: string;
+  claude?: string;
+  grok?: string;
+}
+
+export type AgentTaskType =
+  | "code-review"
+  | "refactor"
+  | "unit-tests"
+  | "documentation"
+  | "bug-finder"
+  | "explain";
+
+export interface AgentTask {
+  id: string;
+  type: AgentTaskType;
+  provider: LLMProvider;
+  status: "pending" | "running" | "done" | "error";
+  prompt: string;
+  result?: string;
+  filePath?: string;
+  timestamp: string;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 export interface WorkspaceSettings {
   editor: {
     fontSize: number;
@@ -30,12 +60,12 @@ export interface WorkspaceSettings {
     autoSave: "afterDelay" | "off";
   };
   workbench: {
-    theme: "5080-dark" | "vs-dark" | "vs-light" | "classic-light" | "nordic-frost" | "dracula-eclipse" | "cyberpunk-neon" | "luxury-gold";
+    theme: "antigravity-teal" | "5080-dark" | "vs-dark" | "vs-light" | "classic-light" | "nordic-frost" | "dracula-eclipse" | "cyberpunk-neon" | "luxury-gold";
     sidebarWidth: number;
     bottomPanelHeight: number;
     sidebarVisible: boolean;
     bottomPanelVisible: boolean;
-    activeSidebarTab: "explorer" | "search" | "git" | "gemini" | "settings" | "extensions" | "profile" | "packages";
+    activeSidebarTab: "explorer" | "search" | "git" | "gemini" | "agents" | "settings" | "extensions" | "profile" | "packages";
     bottomPanelTab: "terminal" | "problems" | "output";
     sidebarPosition: "left" | "right";
     bottomPanelPosition: "bottom" | "right";
@@ -44,6 +74,11 @@ export interface WorkspaceSettings {
     activityBarVisible: boolean;
     layoutPreset: "default" | "zen" | "presentation" | "terminal-focus" | "sidebar-right";
     fileIconTheme: "vscode-classic" | "material-vibrant" | "cyberpunk-neon" | "monochrome-slate" | "minimalist-wire" | "retro-gold";
+  };
+  ai: {
+    provider: LLMProvider;
+    keys: AIProviderKeys;
+    agentAutoApply: boolean;
   };
 }
 
@@ -121,4 +156,3 @@ export interface CustomThemeColors {
   lineHighlight?: string; // custom active line background
   selection?: string; // custom selection background
 }
-

@@ -66,7 +66,7 @@ export default function EditorArea({
   const [openDropdownPath, setOpenDropdownPath] = useState<string | null>(null);
 
   // Helper structures for breadcrumb parsing
-  const segments = activeTab ? activeTab.relativePath.split("/").filter(Boolean) : [];
+  const segments = activeTab ? activeTab.relativePath.split(/[\\/]/).filter(Boolean) : [];
   const rootPrefix = activeTab
     ? activeTab.id.substring(0, activeTab.id.length - activeTab.relativePath.length)
     : "";
@@ -111,7 +111,7 @@ export default function EditorArea({
   // Helper to expand all parents of a folder in the sidebar
   const expandDirParents = (targetPath: string) => {
     if (!onToggleExpand || !expandedPaths) return;
-    const parts = targetPath.split("/").filter(Boolean);
+    const parts = targetPath.split(/[\\/]/).filter(Boolean);
     for (let i = 0; i < parts.length; i++) {
       const prefix = (targetPath.startsWith("/") ? "/" : "") + parts.slice(0, i + 1).join("/");
       if (!expandedPaths.has(prefix)) {
@@ -582,10 +582,7 @@ export default function EditorArea({
             })}
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5 select-none font-mono text-[9px] text-[#4af2a1] font-bold uppercase tracking-wider bg-[#102a1e] px-2 py-0.5 rounded border border-[#16432e] z-45 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#4af2a1] animate-pulse" />
-            <span>5080 PieceTree Coupled (0.01ms Dispatch)</span>
-          </div>
+
         </div>
       )}
 

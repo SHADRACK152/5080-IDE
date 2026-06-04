@@ -9,6 +9,8 @@ import {
   SearchResult,
   UserProfile,
   CustomThemeColors,
+  LLMProvider,
+  AIProviderKeys,
 } from "./types";
 import TitleBar from "./components/TitleBar";
 import ActivityBar from "./components/ActivityBar";
@@ -19,6 +21,7 @@ import StatusBar from "./components/StatusBar";
 import CommandPalette from "./components/CommandPalette";
 import NewProjectModal from "./components/NewProjectModal";
 import WelcomeScreen from "./components/WelcomeScreen";
+import RightAgentPanel from "./components/RightAgentPanel";
 import { Layers, HelpCircle, RefreshCw, Cpu, Code, Settings, Save, Sparkles, AlertCircle, Terminal, X, Power, Home } from "lucide-react";
 
 // Detect if running inside Electron desktop app
@@ -55,6 +58,31 @@ export interface AppThemeConfig {
 }
 
 export const THEME_PALETTES: Record<string, AppThemeConfig> = {
+  "antigravity-teal": {
+    id: "antigravity-teal",
+    name: "5080 Premium Teal",
+    base: "vs-dark",
+    colors: {
+      editorBg: "#041c24",
+      editorFg: "#e2e8f0",
+      editorCursor: "#0ea5e9",
+      editorLineNumber: "#204a57",
+      syntaxKeyword: "#38bdf8",
+      syntaxString: "#34d399",
+      syntaxNumber: "#fbbf24",
+      syntaxComment: "#4a7482",
+      syntaxFunction: "#60a5fa",
+      syntaxType: "#2dd4bf",
+      sidebarBg: "#03171e",
+      sidebarBorder: "#010a0e",
+      activityBarBg: "#010d12",
+      activityBarAccent: "#0ea5e9",
+      statusBarBg: "#021219",
+      statusBarFg: "#94a3b8",
+      bottomPanelBg: "#041c24",
+      titleBarBg: "#010d12"
+    }
+  },
   "5080-dark": {
     id: "5080-dark",
     name: "Classic Obsidian Rouge",
@@ -224,7 +252,7 @@ export default function App() {
   const [bottomPanelHeight, setBottomPanelHeight] = useState(240);
   const [isBottomPanelVisible, setIsBottomPanelVisible] = useState(true);
   const [activeSidebarTab, setActiveSidebarTab] = useState<
-    "explorer" | "search" | "git" | "gemini" | "settings" | "extensions" | "profile" | "packages"
+    "explorer" | "search" | "git" | "gemini" | "agents" | "settings" | "extensions" | "profile" | "packages"
   >("explorer");
   const [activeThemeId, setActiveThemeId] = useState("ext-theme-default");
   const [activeThemeConfig, setActiveThemeConfig] = useState<{
@@ -377,8 +405,8 @@ export default function App() {
     } catch {}
 
     // Default startup configuration
-    const defaultPalette = THEME_PALETTES["5080-dark"];
-    setActiveThemeId("5080-dark");
+    const defaultPalette = THEME_PALETTES["antigravity-teal"];
+    setActiveThemeId("antigravity-teal");
     setActiveThemeConfig({
       id: defaultPalette.id,
       base: defaultPalette.base,
@@ -398,7 +426,7 @@ export default function App() {
         "editor.lineHighlightBackground": defaultPalette.colors.lineHighlight || `${defaultPalette.colors.editorBg}99`,
         "editorLineNumber.foreground": defaultPalette.colors.editorLineNumber,
         "editorLineNumber.activeForeground": defaultPalette.colors.editorCursor,
-        "editor.selectionBackground": defaultPalette.colors.selection || "#4a4a4a",
+        "editor.selectionBackground": defaultPalette.colors.selection || "#0c3545",
         "editorIndentGuide.activeBackground1": defaultPalette.colors.editorCursor,
       }
     });
@@ -568,7 +596,7 @@ export default function App() {
       }
 
       /* Dynamic panels background and border controls */
-      #sidebar-container, .sidebar-container {
+      #sidebar-container, .sidebar-container, #right-agent-panel {
         background-color: var(--theme-sidebar-bg) !important;
         border-color: var(--theme-sidebar-border) !important;
         color: var(--theme-text-primary) !important;
@@ -579,7 +607,17 @@ export default function App() {
       #sidebar-container .border-neutral-800,
       #sidebar-container .border-[#1E1E1E],
       #sidebar-container .border-[#3c3c3c],
-      #sidebar-container .border-zinc-700 {
+      #sidebar-container .border-zinc-700,
+      #right-agent-panel .border-zinc-800, 
+      #right-agent-panel .border-b,
+      #right-agent-panel .border-t,
+      #right-agent-panel .border-neutral-800,
+      #right-agent-panel .border-[#1E1E1E],
+      #right-agent-panel .border-[#3c3c3c],
+      #right-agent-panel .border-zinc-700,
+      #right-agent-panel .border-zinc-850,
+      #right-agent-panel .border-zinc-850\\/80,
+      #right-agent-panel .border-zinc-800\\/80 {
         border-color: var(--theme-sidebar-border) !important;
       }
 
@@ -652,6 +690,8 @@ export default function App() {
       .bg-neutral-900\\/10,
       .bg-pink-900\\/10,
       .bg-cyan-950\\/20,
+      .bg-\\[\\#1e1e1e\\]\\/20,
+      .bg-\\[\\#1e1e1e\\]\\/60,
       .bg-[#38383833] {
         background-color: var(--theme-bg-modifier) !important;
       }
@@ -767,6 +807,103 @@ export default function App() {
   ]);
   const [isAIPending, setIsAIPending] = useState(false);
 
+  // AI Provider & Keys state (persisted in localStorage)
+  const [aiProvider, setAIProvider] = useState<LLMProvider>(() => {
+    try {
+      return (localStorage.getItem("ai_provider_5080") as LLMProvider) || "gemini";
+    } catch { return "gemini"; }
+  });
+  const [aiKeys, setAIKeys] = useState<AIProviderKeys>(() => {
+    try {
+      const saved = localStorage.getItem("ai_keys_5080");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  // Right side AI Agent Chat panel state
+  const [isRightPanelVisible, setIsRightPanelVisible] = useState(true);
+  const [rightPanelWidth, setRightPanelWidth] = useState(320);
+
+  const handleUpdateAIKeys = (keys: Partial<AIProviderKeys>) => {
+    setAIKeys((prev) => {
+      const next = { ...prev, ...keys };
+      try {
+        localStorage.setItem("ai_keys_5080", JSON.stringify(next));
+      } catch (err) {
+        console.warn("Keys persistence fail:", err);
+      }
+      return next;
+    });
+  };
+
+  const handleUpdateAIProvider = (provider: LLMProvider) => {
+    setAIProvider(provider);
+    try {
+      localStorage.setItem("ai_provider_5080", provider);
+    } catch (err) {
+      console.warn("Provider persistence fail:", err);
+    }
+  };
+
+  const handleApplyAgentResult = (content: string, relativePath: string) => {
+    const matchedTab = tabs.find((t) => t.relativePath === relativePath || t.id.endsWith(relativePath));
+    if (matchedTab) {
+      handleContentChange(matchedTab.id, content);
+      logOutput(`Applied agent changes to active editor tab for ${relativePath}`);
+    } else {
+      logOutput(`Could not find open tab for ${relativePath} to apply changes`);
+    }
+  };
+
+  // Selected Model State (defaults to Gemini 3.5 Flash High)
+  const [selectedModelId, setSelectedModelId] = useState<string>(() => {
+    try {
+      return localStorage.getItem("active_model_id_5080") || "gemini-2.5-flash-high";
+    } catch {
+      return "gemini-2.5-flash-high";
+    }
+  });
+
+  // Custom Models Config (persisted in localStorage)
+  const [customModels, setCustomModels] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("custom_models_5080");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleSelectModel = (modelId: string, provider: LLMProvider) => {
+    setSelectedModelId(modelId);
+    setAIProvider(provider);
+    try {
+      localStorage.setItem("active_model_id_5080", modelId);
+      localStorage.setItem("ai_provider_5080", provider);
+    } catch (err) {}
+    logOutput(`Active model switched to: ${modelId} (${provider})`);
+  };
+
+  const handleAddCustomModel = (model: any) => {
+    setCustomModels((prev) => {
+      const next = [...prev, model];
+      try {
+        localStorage.setItem("custom_models_5080", JSON.stringify(next));
+      } catch (err) {}
+      return next;
+    });
+  };
+
+  const handleDeleteCustomModel = (id: string) => {
+    setCustomModels((prev) => {
+      const next = prev.filter((m) => m.id !== id);
+      try {
+        localStorage.setItem("custom_models_5080", JSON.stringify(next));
+      } catch (err) {}
+      return next;
+    });
+  };
+
   // Command Palette Open
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
@@ -776,17 +913,7 @@ export default function App() {
 
   // User Workspace Editor preferences
   const [settings, setSettings] = useState<WorkspaceSettings>(() => {
-    // Attempt to load from localStorage first or fall back to defaults
-    try {
-      const saved = localStorage.getItem("workspace_presets_5080");
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.warn("Could not load workspace settings:", e);
-    }
-
-    return {
+    const defaultSettings: WorkspaceSettings = {
       editor: {
         fontSize: 14,
         fontFamily: "'JetBrains Mono', monospace",
@@ -797,7 +924,7 @@ export default function App() {
         autoSave: "off",
       },
       workbench: {
-        theme: "5080-dark",
+        theme: "antigravity-teal",
         sidebarWidth: 260,
         bottomPanelHeight: 240,
         sidebarVisible: true,
@@ -809,10 +936,35 @@ export default function App() {
         zenMode: false,
         statusBarVisible: true,
         activityBarVisible: true,
-        layoutPreset: "default" as const,
-        fileIconTheme: "vscode-classic" as const,
+        layoutPreset: "default",
+        fileIconTheme: "vscode-classic",
+      },
+      ai: {
+        provider: "gemini" as LLMProvider,
+        keys: {},
+        agentAutoApply: false,
       },
     };
+
+    try {
+      const saved = localStorage.getItem("workspace_presets_5080");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          return {
+            ...defaultSettings,
+            ...parsed,
+            editor: { ...defaultSettings.editor, ...(parsed.editor || {}) },
+            workbench: { ...defaultSettings.workbench, ...(parsed.workbench || {}) },
+            ai: { ...defaultSettings.ai, ...(parsed.ai || {}) }
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load workspace settings:", e);
+    }
+
+    return defaultSettings;
   });
 
   // Authenticated Developer Account Profile State
@@ -1100,6 +1252,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspacePath: folderPath }),
       });
+      await fetchWorkspaceInfo();
 
       // Save to recent workspaces
       const name = folderPath.split(/[\\/]/).filter(Boolean).pop() || folderPath;
@@ -1114,6 +1267,7 @@ export default function App() {
 
       setShowWelcome(false);
       await loadFileTree();
+      await fetchGitStatus();
       logOutput(`Workspace opened: ${folderPath}`);
     } catch (err: any) {
       logOutput(`Failed to open folder: ${err.message}`);
@@ -1127,8 +1281,10 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspacePath: folderPath }),
       });
+      await fetchWorkspaceInfo();
       setShowWelcome(false);
       await loadFileTree();
+      await fetchGitStatus();
       logOutput(`Workspace restored: ${folderPath}`);
     } catch (err: any) {
       logOutput(`Failed to open recent workspace: ${err.message}`);
@@ -1142,6 +1298,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspacePath: "" }),
       });
+      await fetchWorkspaceInfo();
       setShowWelcome(true);
       setFileTree([]);
       setTabs([]);
@@ -1167,8 +1324,10 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ workspacePath: newPath }),
         });
+        await fetchWorkspaceInfo();
         setShowWelcome(false);
         await loadFileTree();
+        await fetchGitStatus();
         logOutput(`Workspace changed to: ${newPath}`);
       });
     }
@@ -1194,8 +1353,8 @@ export default function App() {
       const data = await res.json();
 
       if (res.ok) {
-        const name = filePath.split("/").pop() || "untitled";
-        const relativePath = filePath.replace(workspaceInfo?.workspace || "", "").replace(/^\//, "");
+        const name = filePath.split(/[\\/]/).pop() || "untitled";
+        const relativePath = filePath.replace(workspaceInfo?.workspace || "", "").replace(/^[\\/]/, "");
         const newTab: EditorTab = {
           id: filePath,
           name,
@@ -1622,7 +1781,7 @@ export default function App() {
     }
   };
 
-  // ── 7. Gemini Assist AI chats ──────────────────────────────────────────
+  // ── 7. Gemini / Multi-Provider AI chats ──────────────────────────────
   const handleSendMessage = async (text: string) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -1637,10 +1796,12 @@ export default function App() {
     const activeTab = tabs.find((t) => t.id === activeTabId);
 
     try {
-      const res = await fetch("/api/gemini/chat", {
+      const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          provider: aiProvider,
+          apiKey: (aiKeys as any)[aiProvider] || undefined,
           messages: [...chatMessages, userMsg],
           selectedFile: activeTab
             ? { relativePath: activeTab.relativePath, content: activeTab.content }
@@ -1660,9 +1821,9 @@ export default function App() {
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
-        logOutput("Gemini AI Copilot diagnostics completed successfully.");
+        logOutput(`Goldman responded via ${aiProvider.toUpperCase()} provider.`);
       } else {
-        throw new Error(data.error || "Gemini API Timeout");
+        throw new Error(data.error || "AI API Timeout");
       }
     } catch (err: any) {
       setChatMessages((prev) => [
@@ -1680,7 +1841,7 @@ export default function App() {
   };
 
   // ── 8. Settings controllers ────────────────────────────────────────────
-  const handleUpdateSetting = (category: "editor" | "workbench", key: string, value: any) => {
+  const handleUpdateSetting = (category: "editor" | "workbench" | "ai", key: string, value: any) => {
     setSettings((prev) => {
       const next = {
         ...prev,
@@ -1964,6 +2125,15 @@ export default function App() {
   ];
 
   const activeTabName = tabs.find((t) => t.id === activeTabId)?.name;
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activeFile = activeTab
+    ? {
+        path: activeTab.id,
+        relativePath: activeTab.relativePath,
+        content: activeTab.content,
+        name: activeTab.name,
+      }
+    : null;
 
   if (isExited) {
     return (
@@ -1996,6 +2166,7 @@ export default function App() {
       {/* 1. Custom frameless style Title Bar */}
       <TitleBar
         activeFileName={activeTabName}
+        workspaceName={workspaceInfo?.name || "5080-ide"}
         isMaximized={isMaximized}
         onToggleMaximize={() => setIsMaximized(!isMaximized)}
         onMinimize={() => logOutput("Window minimizing (Simulation)...")}
@@ -2114,13 +2285,27 @@ export default function App() {
           savedThemes={savedThemes}
           onLoadCustomTheme={handleLoadCustomTheme}
           onDeleteCustomTheme={handleDeleteCustomTheme}
-
           // Personalization props
           currentUser={currentUser}
           onLogin={handleLogin}
           onLogout={handleLogout}
           onUpdateProfile={handleUpdateProfile}
           logOutput={logOutput}
+
+          // AI / Agent props
+          aiKeys={aiKeys}
+          aiProvider={aiProvider}
+          onUpdateAIKeys={handleUpdateAIKeys}
+          onUpdateAIProvider={handleUpdateAIProvider}
+          activeFile={activeFile}
+          onApplyAgentResult={handleApplyAgentResult}
+
+          // Model configuration props
+          selectedModelId={selectedModelId}
+          onSelectModel={handleSelectModel}
+          customModels={customModels}
+          onAddCustomModel={handleAddCustomModel}
+          onDeleteCustomModel={handleDeleteCustomModel}
         />
 
         {/* Main interactive panel splits */}
@@ -2140,6 +2325,7 @@ export default function App() {
               onCloneRepository={handleCloneRepository}
               onNewFile={handleNewFileWelcome}
               workspaceName={workspaceInfo?.workspace?.split(/[\\/]/).pop()}
+              currentUser={currentUser}
             />
           ) : (
           <EditorArea
@@ -2184,8 +2370,26 @@ export default function App() {
             onClearOutput={() => setOutputLogs([])}
             onApplyLintFix={runCodeQualityChecks}
             position={settings.workbench.bottomPanelPosition}
+            workspacePath={workspaceInfo?.workspace}
+            onRefreshWorkspace={refreshExplorer}
           />
         </div>
+
+        <RightAgentPanel
+          width={rightPanelWidth}
+          onWidthChange={setRightPanelWidth}
+          isVisible={isRightPanelVisible}
+          onToggleVisible={() => setIsRightPanelVisible(!isRightPanelVisible)}
+          aiKeys={aiKeys}
+          activeFile={activeFile}
+          onApplyAgentResult={handleApplyAgentResult}
+          logOutput={logOutput}
+
+          // Model configuration props
+          selectedModelId={selectedModelId}
+          onSelectModel={handleSelectModel}
+          customModels={customModels}
+        />
       </div>
 
       {/* 3. Status indication strip bottom */}

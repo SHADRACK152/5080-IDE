@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Folder,
   File,
@@ -21,9 +21,25 @@ import {
   FileCode,
   FileJson,
   FileText,
-  Image
+  Image,
+  Bot,
+  Key,
+  Eye,
+  EyeOff,
+  Copy,
+  FilePen,
+  Play,
+  ShieldCheck,
+  Wrench,
+  TestTube2,
+  BookOpen,
+  Bug,
+  Lightbulb,
+  CheckCheck,
+  ChevronUp,
+  Settings
 } from "lucide-react";
-import { FileNode, GitChange, SearchResult, ChatMessage, WorkspaceSettings, UserProfile, CustomThemeColors } from "../types";
+import { FileNode, GitChange, SearchResult, ChatMessage, WorkspaceSettings, UserProfile, CustomThemeColors, LLMProvider, AIProviderKeys, AgentTask, AgentTaskType } from "../types";
 import ExtensionsTab from "./ExtensionsTab";
 import ProfileTab from "./ProfileTab";
 import PackagesTab from "./PackagesTab";
@@ -32,7 +48,7 @@ interface SidebarProps {
   width: number;
   onWidthChange: (w: number) => void;
   isVisible: boolean;
-  activeTab: "explorer" | "search" | "git" | "gemini" | "settings" | "extensions" | "profile" | "packages";
+  activeTab: "explorer" | "search" | "git" | "gemini" | "agents" | "settings" | "extensions" | "profile" | "packages";
 
   // Explorer params
   fileTree: FileNode[];
@@ -43,10 +59,9 @@ interface SidebarProps {
   onAddFolder: (parentPath: string, name: string) => void;
   onDeletePath: (path: string) => void;
   onRefreshExplorer: () => void;
-  onOpenNewProject?: () => void; // Support New Project Scaffolding
+  onOpenNewProject?: () => void;
   noFolderOpen?: boolean;
   onOpenFolder?: () => void;
-
 
   // Search params
   searchResults: SearchResult[];
@@ -68,13 +83,28 @@ interface SidebarProps {
 
   // Settings params
   settings: WorkspaceSettings;
-  onUpdateSetting: (category: "editor" | "workbench", key: string, value: any) => void;
+  onUpdateSetting: (category: "editor" | "workbench" | "ai", key: string, value: any) => void;
   customTheme: CustomThemeColors;
   onUpdateCustomTheme: (colors: Partial<CustomThemeColors>) => void;
   onSaveCustomTheme: (name: string, colors: CustomThemeColors) => void;
   savedThemes: Array<{ id: string; name: string; colors: CustomThemeColors }>;
   onLoadCustomTheme: (colors: CustomThemeColors, id: string) => void;
   onDeleteCustomTheme: (id: string) => void;
+
+  // AI Provider / Agent params
+  aiKeys: AIProviderKeys;
+  aiProvider: LLMProvider;
+  onUpdateAIKeys: (keys: Partial<AIProviderKeys>) => void;
+  onUpdateAIProvider: (provider: LLMProvider) => void;
+  activeFile?: { path: string; relativePath: string; content: string; name: string } | null;
+  onApplyAgentResult?: (content: string, filePath: string) => void;
+
+  // Dynamic model configuration props
+  selectedModelId: string;
+  onSelectModel: (modelId: string, provider: LLMProvider) => void;
+  customModels: any[];
+  onAddCustomModel: (model: any) => void;
+  onDeleteCustomModel: (id: string) => void;
 
   // Extensions params
   onApplyTheme?: (themeId: string, themeConfig: { base: string; rules: any[]; colors: any[] }) => void;
@@ -314,6 +344,20 @@ export default function Sidebar({
   onLoadCustomTheme,
   onDeleteCustomTheme,
 
+  // AI Providers
+  aiKeys,
+  aiProvider,
+  onUpdateAIKeys,
+  onUpdateAIProvider,
+  activeFile,
+  onApplyAgentResult,
+
+  selectedModelId,
+  onSelectModel,
+  customModels,
+  onAddCustomModel,
+  onDeleteCustomModel,
+
   // Extensions
   onApplyTheme,
   onAddSnippet,
@@ -333,7 +377,9 @@ export default function Sidebar({
   const [addingToPath, setAddingToPath] = useState<{ path: string; type: "file" | "folder" } | null>(null);
   const [gitCommitMessage, setGitCommitMessage] = useState("");
   const [geminiInput, setGeminiInput] = useState("");
-  
+  const [isOutlineExpanded, setIsOutlineExpanded] = useState(false);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
+
   // Custom theme maker selections
   const [colorGroup, setColorGroup] = useState<"editor" | "syntax" | "workbench">("editor");
   const [themeSaveName, setThemeSaveName] = useState("");
@@ -349,6 +395,39 @@ export default function Sidebar({
   const [uploadStatus, setUploadStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // AI Key visibility toggles
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [localKeys, setLocalKeys] = useState<AIProviderKeys>(aiKeys);
+  const [keysSaved, setKeysSaved] = useState(false);
+
+  // Agent state
+  const [agentTasks, setAgentTasks] = useState<AgentTask[]>([]);
+  const [runningAgent, setRunningAgent] = useState<string | null>(null);
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [copiedTask, setCopiedTask] = useState<string | null>(null);
+  const [agentCustomPrompt, setAgentCustomPrompt] = useState("");
+
+  // Custom Model Configuration States
+  const [isSidebarModelListOpen, setIsSidebarModelListOpen] = useState(false);
+  const [customModelName, setCustomModelName] = useState("");
+  const [customModelIdVal, setCustomModelIdVal] = useState("");
+  const [customModelProvider, setCustomModelProvider] = useState<LLMProvider>("openai");
+  const [customModelSpeed, setCustomModelSpeed] = useState<"Fast" | "Medium" | "Slow">("Fast");
+  const sidebarModelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropup when clicking outside in sidebar
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sidebarModelDropdownRef.current && !sidebarModelDropdownRef.current.contains(event.target as Node)) {
+        setIsSidebarModelListOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleUploadFiles = async (files: FileList, targetParentPath = "") => {
     if (!files || files.length === 0) return;
@@ -534,12 +613,24 @@ export default function Sidebar({
       fileTheme
     );
 
+    // Compute Git change status
+    const gitStatus = (() => {
+      if (!gitChanges) return null;
+      const match = gitChanges.find(c => c.path === node.path || c.relativePath === node.relativePath);
+      if (!match) return null;
+      const s = match.status.trim();
+      if (s === "M" || s.toUpperCase() === "MODIFIED") return { text: "M", color: "text-[#fbbf24]" }; // Amber
+      if (s === "??" || s === "U" || s.toUpperCase() === "UNTRACKED") return { text: "U", color: "text-[#34d399]" }; // Green
+      if (s === "A" || s.toUpperCase() === "ADDED") return { text: "A", color: "text-[#34d399]" }; // Green
+      return { text: s, color: "text-[#34d399]" };
+    })();
+
     return (
-      <div key={node.path} className="select-none font-sans">
+      <div key={node.path} className="select-none font-sans relative">
         {/* Node strip */}
         <div
           className="flex items-center justify-between group h-6.5 text-[12.5px] hover:bg-[#2a2d2e]/60 px-2 rounded cursor-pointer transition-colors relative"
-          style={{ paddingLeft: `${depth * 10 + 8}px` }}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => {
             if (isFolder) {
               onToggleExpand(node.path);
@@ -548,6 +639,15 @@ export default function Sidebar({
             }
           }}
         >
+          {/* Indentation guide lines */}
+          {Array.from({ length: depth }).map((_, idx) => (
+            <div
+              key={idx}
+              className="absolute top-0 bottom-0 border-r border-[#204a57]/20 pointer-events-none"
+              style={{ left: `${idx * 12 + 14}px`, width: "1px" }}
+            />
+          ))}
+
           <div className="flex items-center gap-1.5 truncate flex-1 mr-2">
             {isFolder ? (
               <>
@@ -567,8 +667,15 @@ export default function Sidebar({
             <span className={`truncate ${labelColor} font-sans`}>{node.name}</span>
           </div>
 
+          {/* Git Status Badge */}
+          {gitStatus && (
+            <span className={`text-[10px] font-bold mr-1 w-4 h-4 flex items-center justify-center shrink-0 ${gitStatus.color} group-hover:hidden`}>
+              {gitStatus.text}
+            </span>
+          )}
+
           {/* Quick hover buttons to add or delete */}
-          <div className="hidden group-hover:flex items-center gap-1 absolute right-2 z-10 bg-[#1e1e1e] pl-1.5">
+          <div className="hidden group-hover:flex items-center gap-1 absolute right-2 z-10 bg-[var(--theme-sidebar-bg)] pl-1.5">
             {isFolder && (
               <>
                 <button
@@ -613,7 +720,7 @@ export default function Sidebar({
 
         {/* Create Input directly under node */}
         {addingToPath?.path === node.path && (
-          <div className="pl-6 pr-2 py-1 bg-neutral-900 border-l border-[#7A2A2A]" style={{ paddingLeft: `${depth * 10 + 24}px` }}>
+          <div className="pl-6 pr-2 py-1 bg-neutral-900 border-l border-[#7A2A2A]" style={{ paddingLeft: `${depth * 12 + 24}px` }}>
             <div className="flex items-center gap-1.5 font-sans">
               <input
                 type="text"
@@ -805,12 +912,83 @@ export default function Sidebar({
               className="hidden"
             />
 
-            {addingToPath === null && (
+            {addingToPath === null ? (
               <div className="flex items-center justify-between bg-[#38383833] py-1 px-2 text-[#858585] text-[10.5px] font-bold uppercase tracking-wider mb-1.5 select-none border-t border-b border-[#1E1E1E]">
                 <span>Open Codebase</span>
                 {isUploading && (
                   <span className="text-amber-400 font-medium animate-pulse text-[10px]">Syncing Drive...</span>
                 )}
+              </div>
+            ) : addingToPath.path === "" && (
+              /* Root-level new file / folder input — shown when header toolbar + / folder icons are clicked */
+              <div className="mx-1 mb-2 px-2 py-1.5 bg-neutral-900 border border-[#7A2A2A] rounded">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-1 select-none">
+                  <span>{addingToPath.type === "file" ? "📄 New file at workspace root" : "📁 New folder at workspace root"}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={addingToPath.type === "file" ? newFileName : newFolderName}
+                    onChange={(e) => {
+                      if (addingToPath.type === "file") setNewFileName(e.target.value);
+                      else setNewFolderName(e.target.value);
+                    }}
+                    className="flex-1 bg-black text-white text-[11px] px-1.5 py-1 rounded outline-none border border-[#7A2A2A] font-mono"
+                    placeholder={addingToPath.type === "file" ? "filename.ts" : "folder-name"}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        if (addingToPath.type === "file") {
+                          if (newFileName.trim()) {
+                            onAddFile("", newFileName.trim());
+                            setNewFileName("");
+                            setAddingToPath(null);
+                          }
+                        } else {
+                          if (newFolderName.trim()) {
+                            onAddFolder("", newFolderName.trim());
+                            setNewFolderName("");
+                            setAddingToPath(null);
+                          }
+                        }
+                      } else if (e.key === "Escape") {
+                        setAddingToPath(null);
+                        if (addingToPath.type === "file") setNewFileName("");
+                        else setNewFolderName("");
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = addingToPath.type === "file" ? newFileName.trim() : newFolderName.trim();
+                      if (val) {
+                        if (addingToPath.type === "file") {
+                          onAddFile("", val);
+                          setNewFileName("");
+                        } else {
+                          onAddFolder("", val);
+                          setNewFolderName("");
+                        }
+                        setAddingToPath(null);
+                      }
+                    }}
+                    className="text-[11px] bg-[#7A2A2A] hover:bg-[#632020] text-white px-2 py-1 rounded transition-colors"
+                  >
+                    Create
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingToPath(null);
+                      setNewFileName("");
+                      setNewFolderName("");
+                    }}
+                    className="text-[11px] text-gray-400 hover:text-white px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             )}
 
@@ -897,6 +1075,44 @@ export default function Sidebar({
                 {fileTree.map((rootNode) => renderTreeNode(rootNode))}
               </div>
             )}
+
+            {/* Outline collapsible section */}
+            <div className="mt-4 border-t border-[#1E1E1E]">
+              <button
+                type="button"
+                onClick={() => setIsOutlineExpanded(!isOutlineExpanded)}
+                className="w-full flex items-center justify-between py-1 px-1.5 hover:bg-[#38383833] text-[#858585] text-[10px] font-bold uppercase tracking-wider select-none border-b border-[#1E1E1E]"
+              >
+                <div className="flex items-center gap-1.5">
+                  {isOutlineExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  <span>Outline</span>
+                </div>
+              </button>
+              {isOutlineExpanded && (
+                <div className="p-3 text-[11px] text-zinc-500 italic select-none">
+                  No symbols found in this file.
+                </div>
+              )}
+            </div>
+
+            {/* Timeline collapsible section */}
+            <div className="border-t border-[#1E1E1E]">
+              <button
+                type="button"
+                onClick={() => setIsTimelineExpanded(!isTimelineExpanded)}
+                className="w-full flex items-center justify-between py-1 px-1.5 hover:bg-[#38383833] text-[#858585] text-[10px] font-bold uppercase tracking-wider select-none border-b border-[#1E1E1E]"
+              >
+                <div className="flex items-center gap-1.5">
+                  {isTimelineExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  <span>Timeline</span>
+                </div>
+              </button>
+              {isTimelineExpanded && (
+                <div className="p-3 text-[11px] text-zinc-500 italic select-none">
+                  No timeline history loaded.
+                </div>
+              )}
+            </div>
 
             {/* Dropping hover view handler overlay */}
             {isDraggingOver && (
@@ -1180,6 +1396,117 @@ export default function Sidebar({
             )}
 
             {/* AI Prompter submission box */}
+            {(() => {
+              const DEFAULT_MODELS = [
+                { id: "gemini-2.5-flash-medium", name: "Gemini 3.5 Flash (Medium)", displayName: "Gemini 3.5 Flash (Medium)", provider: "gemini" as LLMProvider, speed: "Fast" as const },
+                { id: "gemini-2.5-flash-high", name: "Gemini 3.5 Flash (High)", displayName: "Gemini 3.5 Flash (High)", provider: "gemini" as LLMProvider, speed: "Fast" as const },
+                { id: "gemini-2.5-flash-low", name: "Gemini 3.5 Flash (Low)", displayName: "Gemini 3.5 Flash (Low)", provider: "gemini" as LLMProvider, speed: "Fast" as const },
+                { id: "gemini-1.5-pro-low", name: "Gemini 3.1 Pro (Low)", displayName: "Gemini 3.1 Pro (Low)", provider: "gemini" as LLMProvider, speed: "Medium" as const },
+                { id: "gemini-1.5-pro-high", name: "Gemini 3.1 Pro (High)", displayName: "Gemini 3.1 Pro (High)", provider: "gemini" as LLMProvider, speed: "Medium" as const },
+                { id: "claude-3-5-sonnet", name: "Claude Sonnet 4.6 (Thinking)", displayName: "Claude Sonnet 4.6 (Thinking)", provider: "claude" as LLMProvider, speed: "Medium" as const, hasWarning: true },
+                { id: "claude-3-opus", name: "Claude Opus 4.6 (Thinking)", displayName: "Claude Opus 4.6 (Thinking)", provider: "claude" as LLMProvider, speed: "Slow" as const, hasWarning: true },
+                { id: "gpt-oss-120b", name: "GPT-OSS 120B (Medium)", displayName: "GPT-OSS 120B (Medium)", provider: "openai" as LLMProvider, speed: "Fast" as const, hasWarning: true },
+                { id: "grok-3-mini", name: "Grok 3 Mini", displayName: "Grok 3 Mini", provider: "grok" as LLMProvider, speed: "Fast" as const }
+              ];
+
+              const allModels = [
+                ...DEFAULT_MODELS,
+                ...customModels.map((m) => ({
+                  id: m.modelId,
+                  name: m.name,
+                  displayName: m.name,
+                  provider: m.provider,
+                  speed: m.speed,
+                  hasWarning: true
+                }))
+              ];
+
+              const activeModelConfig = allModels.find(m => m.id === selectedModelId) || allModels[0];
+              const isKeySet = !!(aiKeys as any)[activeModelConfig?.provider || "gemini"];
+
+              return (
+                <div ref={sidebarModelDropdownRef} className="px-3 py-1.5 border-t border-zinc-800/80 bg-[#151c22]/90 flex items-center justify-between text-[11px] text-zinc-400 relative select-none shrink-0 mb-1.5 rounded">
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      type="button"
+                      className="p-1 hover:text-white rounded hover:bg-neutral-800/50 transition-colors"
+                      title="Options"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                    
+                    {/* Active Model Trigger Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsSidebarModelListOpen(!isSidebarModelListOpen)}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-black/30 border border-zinc-850 hover:bg-neutral-800/60 hover:text-white transition-colors cursor-pointer font-medium font-sans text-cyan-300 animate-fade-in"
+                    >
+                      <span>{activeModelConfig ? activeModelConfig.name : selectedModelId}</span>
+                      <ChevronUp className="w-3.5 h-3.5 text-zinc-500" />
+                    </button>
+                  </div>
+
+                  {/* Key/MCP Status indicator */}
+                  <div className="flex items-center gap-1.5">
+                    {isKeySet ? (
+                      <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
+                        <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm inline-block" />
+                        <span>Connected</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-amber-500 text-[10px] font-bold" title="API Key is missing for this model's provider">
+                        <span className="text-[10px]">⚠️</span>
+                        <span>MCP Error</span>
+                        <span className="w-2.5 h-2.5 bg-rose-500 inline-block rounded-sm animate-pulse" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Floating Drop-Up menu */}
+                  {isSidebarModelListOpen && (
+                    <div className="absolute bottom-full left-2 right-2 mb-1.5 z-[100] bg-[#0c1e24] border border-zinc-850 rounded-lg p-2.5 shadow-2xl flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 px-1.5 select-none border-b border-zinc-850 pb-1">
+                        Model
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        {allModels.map((m) => {
+                          const isSel = selectedModelId === m.id;
+                          const isKeySetForModel = !!(aiKeys as any)[m.provider];
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectModel(m.id, m.provider);
+                                setIsSidebarModelListOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between p-1.5 px-2.5 rounded text-left transition-colors cursor-pointer text-[11px] font-sans ${
+                                isSel ? "bg-[#0f323c] text-cyan-300 border border-cyan-800/40" : "text-zinc-300 hover:bg-[#122830] hover:text-white"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="truncate">{m.name}</span>
+                                {m.speed && (
+                                  <span className="text-[8px] bg-black/40 text-zinc-400 border border-zinc-800 px-1 py-0.5 rounded font-bold uppercase shrink-0">
+                                    {m.speed}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {m.hasWarning && !isKeySetForModel && (
+                                  <span className="text-amber-500 font-bold" title="API Key is missing">⚠️</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <form onSubmit={handleGeminiSubmit} className="flex gap-2 font-sans shrink-0">
               <input
                 type="text"
@@ -1201,9 +1528,445 @@ export default function Sidebar({
           </div>
         )}
 
+        {/* 5B. AGENTS PANEL */}
+        {activeTab === "agents" && (
+          <div className="flex flex-col h-full font-sans text-xs">
+            {/* Header */}
+            <div className="border border-violet-500/30 bg-violet-950/20 rounded p-2.5 flex items-start gap-1.5 border-l-2 border-l-violet-400 mb-3 select-none">
+              <Bot className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-zinc-200 block text-xs">AI Coding Agents</span>
+                <span className="text-[11px] text-zinc-400 mt-0.5 block">
+                  {activeFile ? `Active: ${activeFile.name}` : "Open a file to run agents on it"}
+                  {" · "}
+                  <span className="text-violet-400 font-medium">{aiProvider}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Agent cards grid */}
+            <div className="space-y-2 mb-3 overflow-y-auto flex-shrink-0">
+              {([
+                { type: "code-review" as AgentTaskType, label: "Code Review", desc: "Deep review: bugs, security, style", Icon: ShieldCheck, color: "text-emerald-400", bg: "bg-emerald-950/20 border-emerald-800/40" },
+                { type: "refactor" as AgentTaskType, label: "Refactor Code", desc: "Improve structure, types, performance", Icon: Wrench, color: "text-amber-400", bg: "bg-amber-950/20 border-amber-800/40" },
+                { type: "unit-tests" as AgentTaskType, label: "Generate Unit Tests", desc: "Jest/Vitest full test coverage", Icon: TestTube2, color: "text-sky-400", bg: "bg-sky-950/20 border-sky-800/40" },
+                { type: "documentation" as AgentTaskType, label: "Add Documentation", desc: "JSDoc/TSDoc for all functions", Icon: BookOpen, color: "text-indigo-400", bg: "bg-indigo-950/20 border-indigo-800/40" },
+                { type: "bug-finder" as AgentTaskType, label: "Bug Finder", desc: "Security vulnerabilities & logic bugs", Icon: Bug, color: "text-rose-400", bg: "bg-rose-950/20 border-rose-800/40" },
+                { type: "explain" as AgentTaskType, label: "Explain Code", desc: "Plain-English walkthrough of the file", Icon: Lightbulb, color: "text-yellow-400", bg: "bg-yellow-950/20 border-yellow-800/40" },
+              ]).map(({ type, label, desc, Icon, color, bg }) => {
+                const isRunning = runningAgent === type;
+                const lastResult = [...agentTasks].reverse().find(t => t.type === type && t.status === "done");
+                return (
+                  <div key={type} className={`border ${bg} rounded p-2.5 transition-all`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${color}`} />
+                        <div>
+                          <span className={`text-[11.5px] font-semibold ${color}`}>{label}</span>
+                          <p className="text-[10px] text-zinc-500 mt-0.5">{desc}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isRunning || !activeFile}
+                        onClick={async () => {
+                          if (!activeFile) return;
+                          setRunningAgent(type);
+                          const taskId = `${type}-${Date.now()}`;
+                          const newTask: AgentTask = {
+                            id: taskId,
+                            type,
+                            provider: aiProvider,
+                            status: "running",
+                            prompt: `Analyze: ${activeFile.relativePath}`,
+                            filePath: activeFile.relativePath,
+                            timestamp: new Date().toLocaleTimeString(),
+                          };
+                          setAgentTasks(prev => [newTask, ...prev]);
+                          setExpandedTask(taskId);
+                          try {
+                            const res = await fetch("/api/ai/agent", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                provider: aiProvider,
+                                apiKey: (aiKeys as any)[aiProvider],
+                                agentType: type,
+                                fileContent: activeFile.content,
+                                filePath: activeFile.relativePath,
+                              }),
+                            });
+                            const data = await res.json();
+                            setAgentTasks(prev => prev.map(t =>
+                              t.id === taskId
+                                ? { ...t, status: data.error ? "error" : "done", result: data.reply || data.error }
+                                : t
+                            ));
+                          } catch (err: any) {
+                            setAgentTasks(prev => prev.map(t =>
+                              t.id === taskId ? { ...t, status: "error", result: `Network error: ${err.message}` } : t
+                            ));
+                          } finally {
+                            setRunningAgent(null);
+                          }
+                        }}
+                        className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-semibold transition-all cursor-pointer ${
+                          isRunning ? "bg-violet-700/40 text-violet-300 animate-pulse" :
+                          !activeFile ? "bg-zinc-800 text-zinc-600 cursor-not-allowed" :
+                          "bg-violet-700 hover:bg-violet-600 text-white"
+                        }`}
+                        title={!activeFile ? "Open a file first" : `Run ${label} agent`}
+                      >
+                        {isRunning
+                          ? <><RefreshCw className="w-3 h-3 animate-spin" /><span>Running...</span></>
+                          : <><Play className="w-3 h-3" /><span>Run</span></>}
+                      </button>
+                    </div>
+
+                    {/* Show last result badge */}
+                    {lastResult && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedTask(expandedTask === lastResult.id ? null : lastResult.id)}
+                        className="mt-1.5 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                      >
+                        <CheckCheck className="w-3 h-3 text-emerald-400" />
+                        <span>Last result · {lastResult.timestamp}</span>
+                        {expandedTask === lastResult.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Custom prompt input */}
+            <div className="border border-zinc-800 rounded p-2 mb-2 flex-shrink-0">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Custom Agent Prompt</span>
+              <div className="flex gap-1.5">
+                <textarea
+                  value={agentCustomPrompt}
+                  onChange={(e) => setAgentCustomPrompt(e.target.value)}
+                  placeholder="Custom instruction for the agent..."
+                  rows={2}
+                  className="flex-1 bg-black border border-zinc-700 text-white text-[11px] px-2 py-1 rounded outline-none resize-none font-sans focus:border-violet-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  disabled={!agentCustomPrompt.trim() || !activeFile || !!runningAgent}
+                  onClick={async () => {
+                    if (!activeFile || !agentCustomPrompt.trim()) return;
+                    setRunningAgent("custom");
+                    const taskId = `custom-${Date.now()}`;
+                    const newTask: AgentTask = {
+                      id: taskId, type: "explain", provider: aiProvider, status: "running",
+                      prompt: agentCustomPrompt, filePath: activeFile.relativePath, timestamp: new Date().toLocaleTimeString(),
+                    };
+                    setAgentTasks(prev => [newTask, ...prev]);
+                    setExpandedTask(taskId);
+                    try {
+                      const res = await fetch("/api/ai/agent", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          provider: aiProvider, apiKey: (aiKeys as any)[aiProvider],
+                          agentType: "explain", fileContent: activeFile.content,
+                          filePath: activeFile.relativePath, customPrompt: agentCustomPrompt,
+                        }),
+                      });
+                      const data = await res.json();
+                      setAgentTasks(prev => prev.map(t =>
+                        t.id === taskId ? { ...t, status: data.error ? "error" : "done", result: data.reply || data.error } : t
+                      ));
+                    } catch (err: any) {
+                      setAgentTasks(prev => prev.map(t =>
+                        t.id === taskId ? { ...t, status: "error", result: `Error: ${err.message}` } : t
+                      ));
+                    } finally {
+                      setRunningAgent(null);
+                      setAgentCustomPrompt("");
+                    }
+                  }}
+                  className="px-2 bg-violet-700 hover:bg-violet-600 text-white rounded text-[10.5px] font-semibold disabled:opacity-40 cursor-pointer transition-colors"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Agent results */}
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {agentTasks.length === 0 && (
+                <div className="text-center py-8 text-zinc-600 select-none">
+                  <Bot className="w-8 h-8 mx-auto mb-2 text-zinc-700" />
+                  <p className="text-[11px]">Run an agent on the active file to see results here.</p>
+                </div>
+              )}
+              {agentTasks.map(task => (
+                <div key={task.id} className={`border rounded transition-all ${
+                  task.status === "error" ? "border-rose-800/50 bg-rose-950/10" :
+                  task.status === "running" ? "border-violet-700/50 bg-violet-950/10 animate-pulse" :
+                  "border-zinc-800 bg-zinc-900/20"
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
+                    className="w-full flex items-center justify-between p-2 cursor-pointer hover:bg-zinc-800/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {task.status === "running" && <RefreshCw className="w-3 h-3 text-violet-400 animate-spin" />}
+                      {task.status === "done" && <CheckCheck className="w-3 h-3 text-emerald-400" />}
+                      {task.status === "error" && <Bug className="w-3 h-3 text-rose-400" />}
+                      <span className="text-[11px] font-semibold text-zinc-300 capitalize">{task.type.replace("-", " ")}</span>
+                      <span className="text-[9px] text-violet-400 font-mono">{task.provider}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] text-zinc-500">{task.timestamp}</span>
+                      {expandedTask === task.id ? <ChevronUp className="w-3 h-3 text-zinc-500" /> : <ChevronDown className="w-3 h-3 text-zinc-500" />}
+                    </div>
+                  </button>
+
+                  {expandedTask === task.id && task.result && (
+                    <div className="px-2 pb-2 space-y-1.5">
+                      <div className="bg-black rounded p-2 max-h-56 overflow-y-auto">
+                        <pre className="text-[10.5px] text-zinc-300 whitespace-pre-wrap leading-relaxed font-mono select-text">{task.result}</pre>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(task.result || "");
+                            setCopiedTask(task.id);
+                            setTimeout(() => setCopiedTask(null), 2000);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-1 rounded text-[10.5px] cursor-pointer transition-colors"
+                        >
+                          {copiedTask === task.id ? <><CheckCheck className="w-3 h-3 text-emerald-400" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
+                        </button>
+                        {onApplyAgentResult && task.filePath && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Extract code block if result contains one, otherwise use raw result
+                              const codeMatch = task.result?.match(/```[\w]*\n([\s\S]*?)\n```/);
+                              const content = codeMatch ? codeMatch[1] : (task.result || "");
+                              onApplyAgentResult(content, task.filePath!);
+                              logOutput(`Applied agent result to ${task.filePath}`);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1 bg-violet-700 hover:bg-violet-600 text-white py-1 rounded text-[10.5px] cursor-pointer transition-colors"
+                          >
+                            <FilePen className="w-3 h-3" /> Apply to File
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 5. WORKSPACE PREFERENCES SETTINGS */}
         {activeTab === "settings" && (
           <div className="flex flex-col h-full space-y-4 font-sans text-[12px] overflow-y-auto pr-1">
+
+            {/* 5-NEW: AI Providers & API Keys */}
+            <div className="flex flex-col gap-3 border border-violet-900/50 p-3 rounded bg-violet-950/20 leading-relaxed font-sans shrink-0">
+              <div className="flex items-center gap-2 border-b border-violet-900/40 pb-1.5 select-none">
+                <Key className="w-3.5 h-3.5 text-violet-400" />
+                <span className="text-[11px] text-violet-300 font-bold uppercase tracking-wider">AI Providers & API Keys</span>
+              </div>
+
+              {/* Active provider selector */}
+              <div className="flex items-center justify-between gap-2 select-none">
+                <span className="text-zinc-300 font-semibold text-[11px]">Active Provider</span>
+                <select
+                  value={aiProvider}
+                  onChange={(e) => onUpdateAIProvider(e.target.value as LLMProvider)}
+                  className="bg-black border border-violet-800/50 text-white p-1 rounded font-sans cursor-pointer outline-none text-[11px] hover:border-violet-500 transition-colors"
+                >
+                  <option value="gemini">✨ Google Gemini</option>
+                  <option value="openai">🤖 OpenAI ChatGPT</option>
+                  <option value="claude">🧠 Anthropic Claude</option>
+                  <option value="grok">⚡ xAI Grok</option>
+                </select>
+              </div>
+
+              {/* Key inputs for each provider */}
+              {([
+                { id: "gemini", label: "Gemini API Key", placeholder: "AIza...", link: "https://aistudio.google.com/apikey" },
+                { id: "openai", label: "OpenAI API Key", placeholder: "sk-...", link: "https://platform.openai.com/api-keys" },
+                { id: "claude", label: "Anthropic Claude Key", placeholder: "sk-ant-...", link: "https://console.anthropic.com/account/keys" },
+                { id: "grok", label: "xAI Grok Key", placeholder: "xai-...", link: "https://console.x.ai" },
+              ] as const).map(({ id, label, placeholder, link }) => (
+                <div key={id} className={`space-y-1 p-2 rounded border transition-colors ${
+                  aiProvider === id ? "border-violet-500/50 bg-violet-950/30" : "border-zinc-800 bg-transparent"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <label className={`text-[10.5px] font-bold ${
+                      aiProvider === id ? "text-violet-300" : "text-zinc-400"
+                    }`}>
+                      {label}
+                      {aiProvider === id && <span className="ml-1.5 text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1 py-0.5 rounded">ACTIVE</span>}
+                    </label>
+                    <a href={link} target="_blank" rel="noreferrer" className="text-[9px] text-violet-400 hover:text-violet-300 underline">
+                      Get key ↗
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type={showKeys[id] ? "text" : "password"}
+                      value={localKeys[id] || ""}
+                      onChange={(e) => setLocalKeys(prev => ({ ...prev, [id]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="flex-1 bg-black border border-zinc-700 text-white px-2 py-1 rounded outline-none text-[11px] font-mono focus:border-violet-500 transition-colors placeholder-zinc-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKeys(prev => ({ ...prev, [id]: !prev[id] }))}
+                      className="p-1 text-zinc-500 hover:text-zinc-200 transition-colors"
+                      title={showKeys[id] ? "Hide key" : "Show key"}
+                    >
+                      {showKeys[id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Save keys button */}
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdateAIKeys(localKeys);
+                  setKeysSaved(true);
+                  setTimeout(() => setKeysSaved(false), 2500);
+                  logOutput("AI provider keys saved to local storage.");
+                }}
+                className="w-full bg-violet-700 hover:bg-violet-600 text-white py-1.5 rounded font-semibold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+              >
+                {keysSaved ? <><CheckCheck className="w-3.5 h-3.5" /> Keys Saved!</> : <><Key className="w-3.5 h-3.5" /> Save API Keys</>}
+              </button>
+              <p className="text-[9.5px] text-zinc-500 leading-relaxed">
+                🔒 Keys are stored in browser localStorage. They are never sent to any server except the LLM provider you select.
+              </p>
+            </div>
+
+
+            {/* Custom Models Configuration Section */}
+            <div className="flex flex-col gap-3 border border-violet-900/40 p-3 rounded bg-violet-950/15 leading-relaxed font-sans shrink-0">
+              <div className="flex items-center gap-2 border-b border-violet-900/30 pb-1.5 select-none">
+                <Settings className="w-3.5 h-3.5 text-violet-400" />
+                <span className="text-[11px] text-violet-300 font-bold uppercase tracking-wider">Configure Custom Models</span>
+              </div>
+
+              {/* List of custom models */}
+              {customModels.length > 0 ? (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">Active Custom Models</span>
+                  <div className="flex flex-col gap-1.5">
+                    {customModels.map((m) => (
+                      <div key={m.id} className="flex items-center justify-between p-2 rounded border border-zinc-850 bg-black/25">
+                        <div className="min-w-0">
+                          <span className="text-zinc-200 font-semibold text-[11px] block truncate">{m.name}</span>
+                          <span className="text-zinc-500 text-[9px] block truncate">{m.provider} · {m.modelId}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteCustomModel(m.id)}
+                          className="text-zinc-500 hover:text-rose-450 p-1 transition-colors cursor-pointer shrink-0"
+                          title="Delete Model"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10.5px] text-zinc-500 italic font-medium leading-relaxed">No custom models configured yet. Add one below!</p>
+              )}
+
+              {/* Add Custom Model form */}
+              <div className="h-px bg-zinc-800/60 my-1" />
+              <div className="space-y-2.5">
+                <span className="text-[10px] text-violet-400 font-bold block uppercase">Add Custom Model</span>
+                
+                <div className="space-y-1">
+                  <label className="text-[9.5px] text-zinc-400 block font-semibold">Model Name</label>
+                  <input
+                    type="text"
+                    value={customModelName}
+                    onChange={(e) => setCustomModelName(e.target.value)}
+                    placeholder="e.g. DeepSeek Coder"
+                    className="w-full bg-black border border-zinc-700 text-white px-2 py-1 rounded text-[11px] outline-none focus:border-violet-500 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9.5px] text-zinc-400 block font-semibold">Model ID (on provider)</label>
+                  <input
+                    type="text"
+                    value={customModelIdVal}
+                    onChange={(e) => setCustomModelIdVal(e.target.value)}
+                    placeholder="e.g. deepseek-coder"
+                    className="w-full bg-black border border-zinc-700 text-white px-2 py-1 rounded text-[11px] outline-none font-mono focus:border-violet-500 transition-colors"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] text-zinc-400 block font-semibold">Provider</label>
+                    <select
+                      value={customModelProvider}
+                      onChange={(e) => setCustomModelProvider(e.target.value as LLMProvider)}
+                      className="w-full bg-black border border-zinc-700 text-white p-1 rounded text-[11px] outline-none cursor-pointer focus:border-violet-500"
+                    >
+                      <option value="gemini">Gemini</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="claude">Claude</option>
+                      <option value="grok">Grok</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] text-zinc-400 block font-semibold">Speed</label>
+                    <select
+                      value={customModelSpeed}
+                      onChange={(e) => setCustomModelSpeed(e.target.value as any)}
+                      className="w-full bg-black border border-zinc-700 text-white p-1 rounded text-[11px] outline-none cursor-pointer focus:border-violet-500"
+                    >
+                      <option value="Fast">Fast</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Slow">Slow</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!customModelName.trim() || !customModelIdVal.trim()}
+                  onClick={() => {
+                    const model = {
+                      id: `${customModelProvider}-${customModelIdVal.trim()}-${Date.now()}`,
+                      name: customModelName.trim(),
+                      provider: customModelProvider,
+                      modelId: customModelIdVal.trim(),
+                      speed: customModelSpeed
+                    };
+                    onAddCustomModel(model);
+                    setCustomModelName("");
+                    setCustomModelIdVal("");
+                    logOutput(`Custom model configured: ${model.name}`);
+                  }}
+                  className="w-full bg-violet-750 hover:bg-violet-650 disabled:opacity-40 text-white py-1.5 rounded font-semibold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Register Custom Model</span>
+                </button>
+              </div>
+            </div>
+
             {/* 5A. Basic Editor Config */}
             <div className="flex flex-col gap-3 border border-zinc-800 p-3 rounded bg-zinc-900/20 leading-relaxed font-sans shrink-0">
               <span className="text-[11px] text-[#AA4A4A] font-bold block select-none border-b border-zinc-800 pb-1 uppercase tracking-wider font-sans">Editor configuration</span>

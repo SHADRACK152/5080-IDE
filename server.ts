@@ -608,6 +608,54 @@ app.post("/api/terminal/run", (req, res) => {
   }
 });
 
+function getPythonEnvironment(workspaceRoot: string) {
+  const isWin = process.platform === "win32";
+  const venvDir = path.join(workspaceRoot, ".venv");
+  
+  if (fs.existsSync(venvDir)) {
+    const pipPath = isWin
+      ? path.join(venvDir, "Scripts", "pip.exe")
+      : path.join(venvDir, "bin", "pip");
+    const pythonPath = isWin
+      ? path.join(venvDir, "Scripts", "python.exe")
+      : path.join(venvDir, "bin", "python");
+      
+    if (fs.existsSync(pipPath)) {
+      return {
+        hasVenv: true,
+        pip: pipPath,
+        python: pythonPath,
+        relativePath: ".venv"
+      };
+    }
+  }
+  
+  return {
+    hasVenv: false,
+    pip: isWin ? "pip" : "pip3",
+    python: isWin ? "python" : "python3",
+    relativePath: null
+  };
+}
+
+// ── GET /api/packages/env ─────────────────────────────────────────────
+// Exposes if a local python virtual environment exists, and the relative path/creation command to use
+app.get("/api/packages/env", (req, res) => {
+  try {
+    const env = getPythonEnvironment(WORKSPACE_ROOT);
+    const isWin = process.platform === "win32";
+    res.json({
+      hasVenv: env.hasVenv,
+      relativePipPath: env.hasVenv
+        ? (isWin ? ".venv\\Scripts\\pip" : ".venv/bin/pip")
+        : (isWin ? "pip" : "pip3"),
+      createVenvCommand: isWin ? "python -m venv .venv" : "python3 -m venv .venv"
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── GET /api/packages/list ─────────────────────────────────────────────
 // Returns installed NPM packages (from package.json) and Python packages (from pip list / requirements.txt)
 app.get("/api/packages/list", async (req, res) => {
@@ -637,7 +685,8 @@ app.get("/api/packages/list", async (req, res) => {
     // 2. Read Python modules
     let pipSuccess = false;
     try {
-      const pipOutput = execSync("pip list --format=json", {
+      const env = getPythonEnvironment(WORKSPACE_ROOT);
+      const pipOutput = execSync(`"${env.pip}" list --format=json`, {
         cwd: WORKSPACE_ROOT,
         timeout: 5000,
         encoding: "utf8",
@@ -652,7 +701,8 @@ app.get("/api/packages/list", async (req, res) => {
       }
     } catch (err) {
       try {
-        const pipOutput2 = execSync("python -m pip list --format=json", {
+        const env = getPythonEnvironment(WORKSPACE_ROOT);
+        const pipOutput2 = execSync(`"${env.python}" -m pip list --format=json`, {
           cwd: WORKSPACE_ROOT,
           timeout: 5000,
           encoding: "utf8",
@@ -774,28 +824,9 @@ app.get("/api/packages/search", async (req, res) => {
   }
 });
 
-// ── POST /api/gemini/chat ─────────────────────────────────────────────
-// Powers the AI Assistant in the sidekick bar using GoogleGenAI SDK!
-app.post("/api/gemini/chat", async (req, res) => {
-  try {
-    const { messages, selectedFile, selectedCode } = req.body;
-
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "Invalid context payload" });
-    }
-
-    if (!ai) {
-      return res.json({
-        reply: "Gemini AI Sidekick is currently in offline developer-assistant mode. To activate full AI-powered codebase diagnostics and autocompletions, configure your `GEMINI_API_KEY` in the **Settings > Secrets** panel of AI Studio.",
-        isOfflineStub: true,
-      });
-    }
-
-    // Format chat contents for Gemini 3.5
-    // Last message is the active instruction, older ones act as chat history
-    const userMessage = messages[messages.length - 1]?.text || "";
-
-    const systemInstruction = `You are "Goldman", the elite AI Coding Copilot integrated natively inside 5080 IDE.
+// ── Shared Goldman system prompt builder ─────────────────────────────────
+function buildGoldmanSystem(selectedFile?: any, selectedCode?: string) {
+  return `You are "Goldman", the elite AI Coding Copilot integrated natively inside 5080 IDE.
 You are extremely smart, professional, helpful, and speak concisely.
 Provide excellent, production-ready, beautiful code changes or detailed explanations based on the user's files and selection.
 
@@ -807,28 +838,263 @@ Guidelines:
 1. When asked to write code, provide full, highly styled TypeScript/Tailwind blocks that drop directly into the workspace.
 2. Maintain space efficiency in answers so they fit perfectly in the narrow 5080 sidebar panel.
 3. Be friendly and highly developer-focused.`;
+}
 
-    // Package contents
-    const contents: any[] = [];
-    messages.forEach((msg: any) => {
-      contents.push({
-        role: msg.sender === "ai" ? "assistant" : "user",
-        parts: [{ text: msg.text }],
+// ── POST /api/ai/chat ─────────────────────────────────────────────────────
+// Unified multi-provider AI chat endpoint supporting Gemini, OpenAI, Claude, Grok
+app.post("/api/ai/chat", async (req, res) => {
+  try {
+    const { provider = "gemini", apiKey, messages, selectedFile, selectedCode, model } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "Invalid context payload" });
+    }
+
+    const systemPrompt = buildGoldmanSystem(selectedFile, selectedCode);
+    const userMessage = messages[messages.length - 1]?.text || "";
+
+    // ── Gemini ────────────────────────────────────────────────────────
+    if (provider === "gemini") {
+      const geminiKey = apiKey || process.env.GEMINI_API_KEY;
+      if (!geminiKey) {
+        return res.json({
+          reply: "Goldman is in offline mode. Add your Gemini API key in **Settings → AI Providers** to activate full AI capabilities.",
+          isOfflineStub: true,
+        });
+      }
+      const { GoogleGenAI: GGA } = await import("@google/genai");
+      const client = new GGA({ apiKey: geminiKey });
+      const contents = messages.map((m: any) => ({
+        role: m.sender === "ai" ? "model" : "user",
+        parts: [{ text: m.text }],
+      }));
+      const resp = await client.models.generateContent({
+        model: model || "gemini-2.0-flash",
+        contents,
+        config: { systemInstruction: systemPrompt, temperature: 0.7 },
       });
+      return res.json({ reply: resp.text || "No reply generated.", provider: "gemini" });
+    }
+
+    // ── OpenAI ChatGPT ────────────────────────────────────────────────
+    if (provider === "openai") {
+      const openaiKey = apiKey || process.env.OPENAI_API_KEY;
+      if (!openaiKey) {
+        return res.json({ reply: "Add your OpenAI API key in **Settings → AI Providers** to use ChatGPT.", isOfflineStub: true });
+      }
+      const oaiMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages.map((m: any) => ({ role: m.sender === "ai" ? "assistant" : "user", content: m.text })),
+      ];
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+        body: JSON.stringify({ model: model || "gpt-4o-mini", messages: oaiMessages, temperature: 0.7, max_tokens: 2048 }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        return res.status(resp.status).json({ error: `OpenAI error: ${errText}` });
+      }
+      const data: any = await resp.json();
+      return res.json({ reply: data.choices?.[0]?.message?.content || "No reply from OpenAI.", provider: "openai" });
+    }
+
+    // ── Anthropic Claude ──────────────────────────────────────────────
+    if (provider === "claude") {
+      const claudeKey = apiKey || process.env.ANTHROPIC_API_KEY;
+      if (!claudeKey) {
+        return res.json({ reply: "Add your Anthropic API key in **Settings → AI Providers** to use Claude.", isOfflineStub: true });
+      }
+      const claudeMessages = messages.map((m: any) => ({
+        role: m.sender === "ai" ? "assistant" : "user",
+        content: m.text,
+      }));
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": claudeKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: model || "claude-3-5-haiku-20241022",
+          system: systemPrompt,
+          messages: claudeMessages,
+          max_tokens: 2048,
+        }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        return res.status(resp.status).json({ error: `Claude error: ${errText}` });
+      }
+      const data: any = await resp.json();
+      return res.json({ reply: data.content?.[0]?.text || "No reply from Claude.", provider: "claude" });
+    }
+
+    // ── xAI Grok ─────────────────────────────────────────────────────
+    if (provider === "grok") {
+      const grokKey = apiKey || process.env.XAI_API_KEY;
+      if (!grokKey) {
+        return res.json({ reply: "Add your xAI API key in **Settings → AI Providers** to use Grok.", isOfflineStub: true });
+      }
+      const grokMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages.map((m: any) => ({ role: m.sender === "ai" ? "assistant" : "user", content: m.text })),
+      ];
+      const resp = await fetch("https://api.x.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${grokKey}` },
+        body: JSON.stringify({ model: model || "grok-3-mini", messages: grokMessages, temperature: 0.7, max_tokens: 2048 }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        return res.status(resp.status).json({ error: `Grok error: ${errText}` });
+      }
+      const data: any = await resp.json();
+      return res.json({ reply: data.choices?.[0]?.message?.content || "No reply from Grok.", provider: "grok" });
+    }
+
+    return res.status(400).json({ error: `Unknown provider: ${provider}` });
+  } catch (err: any) {
+    console.error("AI Chat Error:", err);
+    res.status(500).json({ error: `AI Exception: ${err.message}` });
+  }
+});
+
+// ── POST /api/ai/agent ────────────────────────────────────────────────────
+// Runs a specialized coding agent task on the active file content
+app.post("/api/ai/agent", async (req, res) => {
+  try {
+    const { provider = "gemini", apiKey, agentType, fileContent, filePath, customPrompt, model } = req.body;
+
+    const AGENT_PROMPTS: Record<string, string> = {
+      "code-review": `You are a senior code reviewer inside 5080 IDE. Perform a thorough, professional code review of the provided file. 
+Identify: bugs, security issues, performance problems, code smells, missing error handling, and style violations.
+Format your response with clear sections: ## Summary, ## Critical Issues, ## Warnings, ## Suggestions, ## Positive Aspects.`,
+      "refactor": `You are an expert refactoring engineer inside 5080 IDE. Refactor the provided code to improve:
+- Readability and maintainability
+- Performance and efficiency  
+- Type safety (for TypeScript)
+- Code organization and structure
+Return the COMPLETE refactored file content, followed by a ## Changes Made section explaining what was improved.`,
+      "unit-tests": `You are a test engineering expert inside 5080 IDE. Generate comprehensive unit tests for the provided code.
+Use Jest/Vitest syntax. Cover: happy paths, edge cases, error cases, boundary conditions.
+Return complete test file content ready to save as a .test.ts or .spec.ts file.`,
+      "documentation": `You are a technical documentation expert inside 5080 IDE. Generate thorough JSDoc/TSDoc documentation for all functions, classes, and interfaces in the provided file.
+Return the COMPLETE file with all documentation added inline. Also append a ## Module Overview section at the end.`,
+      "bug-finder": `You are a security and bug analysis expert inside 5080 IDE. Analyze the provided code for:
+- Logic errors and bugs
+- Security vulnerabilities (XSS, injection, auth bypass, etc.)
+- Memory leaks and resource issues
+- Race conditions and async problems
+- Undefined/null dereference risks
+Format: ## Bug Report with severity levels [CRITICAL/HIGH/MEDIUM/LOW] for each issue.`,
+      "explain": `You are a code teacher inside 5080 IDE. Provide a clear, comprehensive explanation of the provided code.
+Cover: what it does, how it works, key algorithms used, data flow, dependencies, and potential improvements.
+Format in clear sections with examples where helpful.`,
+    };
+
+    const agentSystemPrompt = AGENT_PROMPTS[agentType] || AGENT_PROMPTS["explain"];
+    const userPrompt = customPrompt || `Analyze this file: ${filePath || "unnamed"}\n\n\`\`\`\n${fileContent || ""}\n\`\`\``;
+
+    const agentMessages = [{ sender: "user", text: userPrompt }];
+
+    // Route to the same multi-provider logic via internal fetch
+    const chatResp = await fetch(`http://127.0.0.1:3000/api/ai/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider,
+        apiKey,
+        messages: agentMessages,
+        selectedFile: { relativePath: filePath },
+        selectedCode: fileContent,
+        model
+      }),
     });
 
+    // Override with agent-specific system (send directly for providers)
+    // We rebuild for accuracy since internal routing has Goldman system
+    let reply = "";
+
+    if (provider === "gemini") {
+      const geminiKey = apiKey || process.env.GEMINI_API_KEY;
+      if (!geminiKey) {
+        return res.json({ reply: "Add a Gemini API key in Settings → AI Providers to run agents.", isOfflineStub: true });
+      }
+      const { GoogleGenAI: GGA } = await import("@google/genai");
+      const client = new GGA({ apiKey: geminiKey });
+      const resp = await client.models.generateContent({
+        model: model || "gemini-2.0-flash",
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        config: { systemInstruction: agentSystemPrompt, temperature: 0.3 },
+      });
+      reply = resp.text || "Agent produced no output.";
+    } else if (provider === "openai") {
+      const openaiKey = apiKey || process.env.OPENAI_API_KEY;
+      if (!openaiKey) return res.json({ reply: "Add an OpenAI API key in Settings → AI Providers.", isOfflineStub: true });
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+        body: JSON.stringify({ model: model || "gpt-4o-mini", messages: [{ role: "system", content: agentSystemPrompt }, { role: "user", content: userPrompt }], temperature: 0.3, max_tokens: 4096 }),
+      });
+      const data: any = await resp.json();
+      reply = data.choices?.[0]?.message?.content || "No agent output.";
+    } else if (provider === "claude") {
+      const claudeKey = apiKey || process.env.ANTHROPIC_API_KEY;
+      if (!claudeKey) return res.json({ reply: "Add an Anthropic API key in Settings → AI Providers.", isOfflineStub: true });
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": claudeKey, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({ model: model || "claude-3-5-haiku-20241022", system: agentSystemPrompt, messages: [{ role: "user", content: userPrompt }], max_tokens: 4096 }),
+      });
+      const data: any = await resp.json();
+      reply = data.content?.[0]?.text || "No agent output from Claude.";
+    } else if (provider === "grok") {
+      const grokKey = apiKey || process.env.XAI_API_KEY;
+      if (!grokKey) return res.json({ reply: "Add an xAI API key in Settings → AI Providers.", isOfflineStub: true });
+      const resp = await fetch("https://api.x.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${grokKey}` },
+        body: JSON.stringify({ model: model || "grok-3-mini", messages: [{ role: "system", content: agentSystemPrompt }, { role: "user", content: userPrompt }], temperature: 0.3, max_tokens: 4096 }),
+      });
+      const data: any = await resp.json();
+      reply = data.choices?.[0]?.message?.content || "No agent output from Grok.";
+    } else {
+      return res.status(400).json({ error: `Unknown provider: ${provider}` });
+    }
+
+    return res.json({ reply, agentType, provider, filePath });
+  } catch (err: any) {
+    console.error("Agent Error:", err);
+    res.status(500).json({ error: `Agent Exception: ${err.message}` });
+  }
+});
+
+// ── POST /api/gemini/chat (legacy alias) ──────────────────────────────────
+app.post("/api/gemini/chat", async (req, res) => {
+  try {
+    const { messages, selectedFile, selectedCode } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "Invalid context payload" });
+    }
+    if (!ai) {
+      return res.json({
+        reply: "Goldman is in offline mode. Add your Gemini API key in **Settings → AI Providers** to activate full AI capabilities.",
+        isOfflineStub: true,
+      });
+    }
+    const systemInstruction = buildGoldmanSystem(selectedFile, selectedCode);
+    const contents = messages.map((msg: any) => ({
+      role: msg.sender === "ai" ? "model" : "user",
+      parts: [{ text: msg.text }],
+    }));
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: contents.length > 0 ? contents : userMessage,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-      },
+      model: "gemini-2.0-flash",
+      contents,
+      config: { systemInstruction, temperature: 0.7 },
     });
-
-    res.json({
-      reply: response.text || "No reply generated by Gemini.",
-    });
+    res.json({ reply: response.text || "No reply generated by Gemini." });
   } catch (err: any) {
     console.error("Gemini Error:", err);
     res.status(500).json({ error: `Gemini Exception: ${err.message}` });

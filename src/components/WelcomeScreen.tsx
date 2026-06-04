@@ -7,14 +7,17 @@ import {
   Terminal,
   Cpu,
   Sparkles,
-  BookOpen,
   ChevronRight,
   GitBranch,
   Globe,
   FolderPlus,
   FileCode,
-  ArrowRight,
+  Flame,
+  Settings,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
+import { UserProfile } from "../types";
 
 interface RecentWorkspace {
   path: string;
@@ -29,48 +32,42 @@ interface WelcomeScreenProps {
   onCloneRepository?: (url: string) => void;
   onNewFile?: () => void;
   workspaceName?: string;
+  currentUser?: UserProfile | null;
 }
 
 const QUICKSTART_TASKS = [
   {
     icon: FolderOpen,
-    label: "Open a Folder",
-    description: "Browse and open any folder on your computer",
+    label: "Open Folder",
+    description: "Browse and open any directory on your system",
     action: "openFolder",
-    color: "#4ec9b0",
+    color: "#0ea5e9", // Sky accent
     shortcut: "Ctrl+K Ctrl+O",
   },
   {
     icon: FolderPlus,
     label: "New Project",
-    description: "Scaffold a new React, Node.js or Python project",
+    description: "Scaffold a new React, Node.js or Python environment",
     action: "newProject",
-    color: "#7a2a2a",
+    color: "#0e9cb2", // Teal accent
     shortcut: "Ctrl+Shift+N",
   },
   {
     icon: GitBranch,
     label: "Clone Repository",
-    description: "Clone a Git repository from a URL",
+    description: "Clone a Git repository from remote URL",
     action: "clone",
-    color: "#569cd6",
+    color: "#a855f7", // Purple accent
     shortcut: "",
   },
   {
     icon: FileCode,
     label: "New File",
-    description: "Create a blank file in the current workspace",
+    description: "Create a blank workspace text file buffer",
     action: "newFile",
-    color: "#dcdcaa",
+    color: "#fbbf24", // Yellow accent
     shortcut: "Ctrl+N",
   },
-];
-
-const FEATURES = [
-  { icon: Code2, label: "Monaco Editor", desc: "Same engine as VS Code" },
-  { icon: Cpu, label: "C++ PieceTree", desc: "Ultra-low latency core" },
-  { icon: Terminal, label: "Integrated Terminal", desc: "Run any shell command" },
-  { icon: Sparkles, label: "Goldman AI", desc: "Built-in AI copilot" },
 ];
 
 export default function WelcomeScreen({
@@ -80,6 +77,7 @@ export default function WelcomeScreen({
   onCloneRepository,
   onNewFile,
   workspaceName,
+  currentUser,
 }: WelcomeScreenProps) {
   const [recentWorkspaces, setRecentWorkspaces] = useState<RecentWorkspace[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -115,378 +113,218 @@ export default function WelcomeScreen({
     return `${days}d ago`;
   };
 
+  // Default Stats Mockup fallback if user profile metrics are unset
+  const stats = currentUser?.stats || {
+    commits: 18,
+    filesSaved: 142,
+    errorsFixed: 36,
+    codeLineCount: 8450,
+    activeHours: 19,
+  };
+
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "var(--theme-editor-bg, #1e1e1e)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "auto",
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          padding: "48px 64px 32px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          background: "linear-gradient(135deg, rgba(122,42,42,0.08) 0%, transparent 60%)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              background: "linear-gradient(135deg, #7a2a2a, #c0392b)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 24px rgba(122,42,42,0.5)",
-              fontSize: 20,
-              fontWeight: 900,
-              color: "white",
-              letterSpacing: -1,
-            }}
-          >
-            50
+    <div className="w-full h-full bg-[var(--theme-editor-bg)] text-[var(--theme-text-primary)] flex flex-col overflow-auto font-sans select-none relative">
+      {/* Decorative Glowing Radial Circles for Dashboard depth */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 rounded-full filter blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-80 h-80 bg-teal-500/5 rounded-full filter blur-3xl pointer-events-none" />
+
+      {/* Header Banner */}
+      <div className="p-8 px-12 border-b border-[var(--theme-sidebar-border)] bg-gradient-to-r from-[var(--theme-activitybar-bg)]/20 via-transparent to-transparent flex items-center justify-between shrink-0 relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#0e9cb2] to-[#0ea5e9] flex items-center justify-center shadow-lg shadow-sky-950/40 text-white font-extrabold text-sm select-none">
+            5080
           </div>
           <div>
-            <h1
-              style={{
-                fontSize: 26,
-                fontWeight: 700,
-                color: "var(--theme-text-primary, #fff)",
-                lineHeight: 1.1,
-                margin: 0,
-              }}
-            >
-              5080 IDE
+            <h1 className="text-xl font-bold bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
+              5080 Workspace Cockpit
             </h1>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "4px 0 0", letterSpacing: 1 }}>
-              HIGH-PERFORMANCE CODE EDITOR
+            <p className="text-[11px] text-[var(--theme-text-muted)] mt-0.5 tracking-widest uppercase font-semibold">
+              Performance Core Engine Active
             </p>
           </div>
         </div>
-        <p style={{ fontSize: 14, color: "var(--theme-text-muted, rgba(255,255,255,0.5))", margin: 0 }}>
-          {workspaceName
-            ? `Workspace: ${workspaceName}`
-            : "Open a folder or create a new project to get started."}
-        </p>
+        <div className="text-right">
+          <span className="inline-block px-2.5 py-1 rounded bg-[#0e9cb2]/10 border border-[#0e9cb2]/20 text-[#0ea5e9] text-[10.5px] font-bold uppercase tracking-wider">
+            {workspaceName ? `Workspace: ${workspaceName}` : "No Project Active"}
+          </span>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div
-        style={{
-          flex: 1,
-          padding: "40px 64px",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 48,
-          maxWidth: 1100,
-        }}
-      >
-        {/* Left — Start */}
-        <div>
-          <h2
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.35)",
-              letterSpacing: "2px",
-              textTransform: "uppercase",
-              margin: "0 0 20px",
-            }}
-          >
-            Get Started
-          </h2>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {QUICKSTART_TASKS.map((task) => (
-              <button
-                key={task.action}
-                onClick={() => handleAction(task.action)}
-                onMouseEnter={() => setHovered(task.action)}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "14px 16px",
-                  background:
-                    hovered === task.action
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${hovered === task.action ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)"}`,
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  textAlign: "left",
-                  width: "100%",
-                  transform: hovered === task.action ? "translateX(4px)" : "none",
-                }}
-              >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9,
-                    background: `${task.color}18`,
-                    border: `1px solid ${task.color}30`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <task.icon size={18} style={{ color: task.color }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "var(--theme-text-primary, #fff)",
-                      marginBottom: 2,
-                    }}
-                  >
-                    {task.label}
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
-                    {task.description}
-                  </div>
-                </div>
-                {task.shortcut && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: "rgba(255,255,255,0.2)",
-                      fontFamily: "monospace",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {task.shortcut}
-                  </span>
-                )}
-                <ChevronRight
-                  size={14}
-                  style={{
-                    color: "rgba(255,255,255,0.2)",
-                    flexShrink: 0,
-                    opacity: hovered === task.action ? 1 : 0,
-                    transition: "opacity 0.15s",
-                  }}
-                />
-              </button>
-            ))}
-          </div>
-
-          {/* Features */}
-          <div style={{ marginTop: 40 }}>
-            <h2
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "rgba(255,255,255,0.35)",
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                margin: "0 0 16px",
-              }}
-            >
-              Built-in Features
+      {/* Main Grid Content */}
+      <div className="flex-1 p-8 px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl relative z-10">
+        
+        {/* Left Segment: Quick Actions & Developer Cockpit Stats (7 columns) */}
+        <div className="lg:col-span-7 flex flex-col gap-8">
+          
+          {/* Quickstart Launchpad */}
+          <div>
+            <h2 className="text-[11px] font-bold text-[var(--theme-text-muted)] tracking-wider uppercase mb-3 select-none">
+              Quick Start Launchpad
             </h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              {FEATURES.map((f) => (
-                <div
-                  key={f.label}
-                  style={{
-                    padding: "12px 14px",
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <f.icon size={15} style={{ color: "rgba(255,255,255,0.4)", flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>
-                      {f.label}
-                    </div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{f.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right — Recent */}
-        <div>
-          <h2
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.35)",
-              letterSpacing: "2px",
-              textTransform: "uppercase",
-              margin: "0 0 20px",
-            }}
-          >
-            Recent Workspaces
-          </h2>
-
-          {recentWorkspaces.length === 0 ? (
-            <div
-              style={{
-                padding: "40px 24px",
-                textAlign: "center",
-                border: "1px dashed rgba(255,255,255,0.08)",
-                borderRadius: 12,
-              }}
-            >
-              <Clock size={32} style={{ color: "rgba(255,255,255,0.15)", margin: "0 auto 12px" }} />
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>
-                No recent workspaces yet.
-              </p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", margin: "6px 0 0" }}>
-                Open a folder to get started.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {recentWorkspaces.slice(0, 8).map((ws) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {QUICKSTART_TASKS.map((task) => (
                 <button
-                  key={ws.path}
-                  onClick={() => onOpenRecentWorkspace(ws.path)}
-                  onMouseEnter={() => setHovered(`recent-${ws.path}`)}
+                  key={task.action}
+                  onClick={() => handleAction(task.action)}
+                  onMouseEnter={() => setHovered(task.action)}
                   onMouseLeave={() => setHovered(null)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "10px 12px",
-                    background:
-                      hovered === `recent-${ws.path}`
-                        ? "rgba(255,255,255,0.05)"
-                        : "transparent",
-                    border: "1px solid transparent",
-                    borderColor:
-                      hovered === `recent-${ws.path}`
-                        ? "rgba(255,255,255,0.08)"
-                        : "transparent",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    textAlign: "left",
-                    width: "100%",
-                    transition: "all 0.12s ease",
-                  }}
+                  className="flex items-center gap-3.5 p-3.5 bg-black/20 hover:bg-black/40 border border-[var(--theme-sidebar-border)] hover:border-[#0ea5e9]/40 rounded-xl cursor-pointer text-left transition-all duration-300 transform hover:-translate-y-0.5 shadow-md"
                 >
-                  <FolderOpen size={15} style={{ color: "#4ec9b0", flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: "var(--theme-text-primary, #fff)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {ws.name}
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-inner"
+                    style={{
+                      background: `${task.color}15`,
+                      border: `1px solid ${task.color}25`,
+                    }}
+                  >
+                    <task.icon size={18} style={{ color: task.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] font-semibold text-zinc-100 hover:text-white flex items-center justify-between">
+                      <span>{task.label}</span>
+                      {task.shortcut && (
+                        <span className="text-[9.5px] text-[var(--theme-text-muted-extra)] font-mono font-medium ml-2">
+                          {task.shortcut}
+                        </span>
+                      )}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "rgba(255,255,255,0.3)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {ws.path}
+                    <div className="text-[11px] text-[var(--theme-text-muted)] mt-0.5 truncate leading-relaxed">
+                      {task.description}
                     </div>
                   </div>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>
-                    {formatTime(ws.lastOpened)}
-                  </span>
                 </button>
               ))}
             </div>
-          )}
+          </div>
 
-          {/* Tips */}
-          <div
-            style={{
-              marginTop: 40,
-              padding: "20px",
-              background: "rgba(122,42,42,0.08)",
-              border: "1px solid rgba(122,42,42,0.2)",
-              borderRadius: 12,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
-              <Sparkles size={14} style={{ color: "#e74c3c" }} />
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "rgba(255,255,255,0.6)",
-                  letterSpacing: "1px",
-                  textTransform: "uppercase",
-                }}
-              >
-                Goldman AI Tip
-              </span>
+          {/* Developer Cockpit Statistics */}
+          <div>
+            <h2 className="text-[11px] font-bold text-[var(--theme-text-muted)] tracking-wider uppercase mb-3 select-none flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-sky-400" />
+              <span>Developer statistics cockpit</span>
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Commits */}
+              <div className="bg-black/15 border border-[var(--theme-sidebar-border)] rounded-xl p-3.5 text-center flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-[#0ea5e9]/20 transition-colors">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-sky-500/5 rounded-full filter blur-md pointer-events-none" />
+                <span className="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wide">Git Commits</span>
+                <span className="text-xl font-extrabold text-sky-400 mt-1.5 select-all">{stats.commits}</span>
+                <span className="text-[9.5px] text-[var(--theme-text-muted-extra)] mt-1 font-sans">Index pushes</span>
+              </div>
+
+              {/* Files Edited */}
+              <div className="bg-black/15 border border-[var(--theme-sidebar-border)] rounded-xl p-3.5 text-center flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-[#0ea5e9]/20 transition-colors">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-teal-500/5 rounded-full filter blur-md pointer-events-none" />
+                <span className="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wide">Saved Buffers</span>
+                <span className="text-xl font-extrabold text-teal-400 mt-1.5 select-all">{stats.filesSaved}</span>
+                <span className="text-[9.5px] text-[var(--theme-text-muted-extra)] mt-1 font-sans">Files edited</span>
+              </div>
+
+              {/* Errors Fixed */}
+              <div className="bg-black/15 border border-[var(--theme-sidebar-border)] rounded-xl p-3.5 text-center flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-[#0ea5e9]/20 transition-colors">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-amber-500/5 rounded-full filter blur-md pointer-events-none" />
+                <span className="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wide">Lints Fixed</span>
+                <span className="text-xl font-extrabold text-amber-400 mt-1.5 select-all">{stats.errorsFixed}</span>
+                <span className="text-[9.5px] text-[var(--theme-text-muted-extra)] mt-1 font-sans">Compiler fixes</span>
+              </div>
+
+              {/* Coding hours */}
+              <div className="bg-black/15 border border-[var(--theme-sidebar-border)] rounded-xl p-3.5 text-center flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-[#0ea5e9]/20 transition-colors">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-purple-500/5 rounded-full filter blur-md pointer-events-none" />
+                <span className="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wide">Active Hours</span>
+                <span className="text-xl font-extrabold text-purple-400 mt-1.5 select-all">{stats.activeHours}h</span>
+                <span className="text-[9.5px] text-[var(--theme-text-muted-extra)] mt-1 font-sans">Coding time</span>
+              </div>
             </div>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.6 }}>
-              Click the <strong style={{ color: "rgba(255,255,255,0.7)" }}>✦ sparkle icon</strong> in the
-              sidebar to open Goldman, your AI coding assistant. Ask it to explain code, write tests, or refactor files.
-            </p>
-            {process.env.NODE_ENV !== "production" && (
-              <p style={{ fontSize: 11, color: "rgba(255,100,100,0.5)", margin: "10px 0 0" }}>
-                ⚡ Set GEMINI_API_KEY in settings to enable full AI features.
-              </p>
+
+            {/* Micro lines of code counter block */}
+            <div className="mt-3 bg-black/10 border border-[var(--theme-sidebar-border)] rounded-xl px-4 py-2.5 flex items-center justify-between text-xs text-[var(--theme-text-secondary)] shadow-sm">
+              <span className="font-semibold text-zinc-300">Workspace Volumetrics:</span>
+              <div className="flex items-center gap-1.5 font-mono text-sky-400 font-bold">
+                <span>{stats.codeLineCount.toLocaleString()}</span>
+                <span className="text-[10px] text-zinc-500 font-sans font-normal">lines written</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Right Segment: Recent Workspaces & AI Sidekick Tip (5 columns) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          
+          {/* Recent Workspaces list */}
+          <div className="flex-1 flex flex-col min-h-[220px]">
+            <h2 className="text-[11px] font-bold text-[var(--theme-text-muted)] tracking-wider uppercase mb-3 select-none flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Recent Workspaces</span>
+            </h2>
+
+            {recentWorkspaces.length === 0 ? (
+              <div className="flex-1 border border-dashed border-[var(--theme-sidebar-border)] bg-black/5 rounded-xl p-6 text-center flex flex-col items-center justify-center">
+                <Clock size={28} className="text-zinc-600 mb-2" />
+                <p className="text-xs text-[var(--theme-text-muted)] font-medium">No recent workspaces indexed.</p>
+                <p className="text-[10px] text-[var(--theme-text-muted-extra)] mt-1">Open folders to register workspace shortcuts.</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-auto max-h-[240px] space-y-1.5 border border-[var(--theme-sidebar-border)] bg-black/5 rounded-xl p-2.5 scrollbar-thin">
+                {recentWorkspaces.slice(0, 5).map((ws) => (
+                  <button
+                    key={ws.path}
+                    onClick={() => onOpenRecentWorkspace(ws.path)}
+                    onMouseEnter={() => setHovered(`recent-${ws.path}`)}
+                    onMouseLeave={() => setHovered(null)}
+                    className="w-full flex items-center gap-3 p-2 hover:bg-neutral-800/30 border border-transparent hover:border-[var(--theme-sidebar-border)] rounded-lg cursor-pointer text-left transition-all duration-200"
+                  >
+                    <FolderOpen size={14} className="text-[#0e9cb2] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] font-semibold text-zinc-200 hover:text-white truncate">
+                        {ws.name}
+                      </div>
+                      <div className="text-[10px] text-[var(--theme-text-muted)] font-mono truncate mt-0.5 select-all">
+                        {ws.path}
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-[var(--theme-text-muted-extra)] font-medium whitespace-nowrap shrink-0 ml-2">
+                      {formatTime(ws.lastOpened)}
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
+
+          {/* Goldman AI Information Alert Card */}
+          <div className="bg-[#0ea5e9]/5 border border-[#0ea5e9]/20 rounded-xl p-4.5 space-y-2 relative shadow-md">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={14} className="text-[#0ea5e9] animate-pulse" />
+              <span className="text-[10.5px] font-extrabold uppercase text-[#0ea5e9] tracking-wider select-none">
+                AI Copilot Service Active
+              </span>
+            </div>
+            <p className="text-[11.5px] text-[var(--theme-text-secondary)] leading-relaxed font-sans font-medium">
+              Click the <strong className="text-zinc-200">Bot 🤖</strong> or <strong className="text-zinc-200">Sparkle ✦</strong> buttons to engage Goldman agents. They audit compiler errors, review modifications, and apply drop-in code fixes automatically.
+            </p>
+            <div className="pt-1.5 border-t border-[#0ea5e9]/10 flex items-center justify-between text-[10px] text-[var(--theme-text-muted)]">
+              <span>Model Selection active inside Chat desk.</span>
+              {process.env.NODE_ENV !== "production" && (
+                <span className="text-[#0e9cb2] font-semibold font-mono">HMR Loaded</span>
+              )}
+            </div>
+          </div>
+
         </div>
+
       </div>
 
-      {/* Footer */}
-      <div
-        style={{
-          padding: "16px 64px",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
-          5080 IDE v1.4.2 · Built with Electron + React + Monaco
+      {/* Cockpit Footer */}
+      <div className="p-4 px-12 border-t border-[var(--theme-sidebar-border)] bg-black/10 flex items-center justify-between text-[10.5px] text-[var(--theme-text-muted-extra)] shrink-0 font-sans">
+        <span>
+          5080 IDE v1.4.2 · Electron + React + PieceTree Core
         </span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
-          Press <kbd style={{ background: "rgba(255,255,255,0.08)", padding: "1px 5px", borderRadius: 3, fontFamily: "monospace" }}>Ctrl+Shift+P</kbd> for commands
-        </span>
+        <div className="flex items-center gap-3">
+          <span>Press <kbd className="bg-black/35 px-1.5 py-0.5 rounded font-mono text-[9px] border border-zinc-800">F1</kbd> for command palette</span>
+          <span>Press <kbd className="bg-black/35 px-1.5 py-0.5 rounded font-mono text-[9px] border border-zinc-800">Ctrl+B</kbd> for sidebar</span>
+        </div>
       </div>
     </div>
   );
