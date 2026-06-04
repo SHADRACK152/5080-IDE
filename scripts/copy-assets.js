@@ -16,4 +16,9 @@ fs.copyFileSync(
   path.join(destDir, 'icon.png')
 );
 
+fs.copyFileSync(
+  path.join('electron', '5080_logo.png'),
+  path.join(destDir, '5080_logo.png')
+);
+
 console.log('Static assets copied to dist-electron/electron/');

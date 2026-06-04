@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Folder,
   File,
@@ -788,6 +788,10 @@ export default function Sidebar({
     onSendMessage(prompt);
   };
 
+  const renderedTree = useMemo(() => {
+    return fileTree.map((rootNode) => renderTreeNode(rootNode, 0));
+  }, [fileTree, expandedPaths, gitChanges, settings.workbench.fileIconTheme, addingToPath, newFileName, newFolderName]);
+
   return (
     <div
       id="sidebar-container"
@@ -1072,7 +1076,7 @@ export default function Sidebar({
               </div>
             ) : (
               <div className="space-y-0.5">
-                {fileTree.map((rootNode) => renderTreeNode(rootNode))}
+                {renderedTree}
               </div>
             )}
 

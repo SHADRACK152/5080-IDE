@@ -4,6 +4,8 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("electronAPI", {
   // ── Editor Core (PieceTree native bridge) ──────────────────────────
   editorCore: {
+    init: (content: string): Promise<boolean> =>
+      ipcRenderer.invoke("editor:init", content),
     pushEvent: (event: any): Promise<boolean> =>
       ipcRenderer.invoke("editor:pushEvent", event),
     getText: (): Promise<string> =>

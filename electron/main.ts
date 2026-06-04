@@ -15,6 +15,9 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Disable Electron security warning console logs in development
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
+
 // ── Constants ────────────────────────────────────────────────────────────
 const IS_DEV = process.env.NODE_ENV === "development" || process.env.ELECTRON_IS_DEV === "1";
 const PORT = 3000;
@@ -75,7 +78,7 @@ function createMainWindow(): void {
     icon,
     frame: false, // custom titlebar
     titleBarStyle: "hidden",
-    backgroundColor: "#1e1e1e",
+    backgroundColor: "#020e14", // Theme match
     webPreferences: {
       preload: path.join(__dirname, "..", "preload.js"),
       nodeIntegration: false,
@@ -85,13 +88,9 @@ function createMainWindow(): void {
     },
   });
 
-  // Load the app
-  const appUrl = IS_DEV
-    ? `http://127.0.0.1:${PORT}`
-    : `http://127.0.0.1:${PORT}`;
-
-  mainWindow.loadURL(appUrl);
-
+  // Load the app with automatic retries if the server is still binding in production
+  const appUrl = `http://127.0.0.1:${PORT}`;
+  
   const showMainAndCloseSplash = () => {
     setTimeout(() => {
       splashWindow?.close();
@@ -103,6 +102,15 @@ function createMainWindow(): void {
       }
     }, 800);
   };
+
+  const loadWithRetry = () => {
+    mainWindow?.loadURL(appUrl).catch(() => {
+      console.log("[5080 Electron] Server not ready, retrying in 100ms...");
+      setTimeout(loadWithRetry, 100);
+    });
+  };
+
+  loadWithRetry();
 
   mainWindow.webContents.on("did-finish-load", showMainAndCloseSplash);
 
@@ -283,6 +291,51 @@ function registerIpcHandlers(): void {
     process.env.WORKSPACE_OVERRIDE = newPath;
     mainWindow?.webContents.reload();
   });
+
+  // Dev mode proxy handlers for Editor Core (when server is running in external process)
+  if (IS_DEV) {
+    ipcMain.handle("editor:init", async (_event, content: string) => {
+      try {
+        const response = await fetch(`http://127.0.0.1:${PORT}/api/editor/init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+        const data = (await response.json()) as { success: boolean };
+        return data.success;
+      } catch (err) {
+        console.error("[5080 Electron] Dev proxy editor:init error:", err);
+        return false;
+      }
+    });
+
+    ipcMain.handle("editor:pushEvent", async (_event, payload: any) => {
+      try {
+        const response = await fetch(`http://127.0.0.1:${PORT}/api/editor/pushEvent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = (await response.json()) as { success: boolean };
+        return data.success;
+      } catch (err) {
+        console.error("[5080 Electron] Dev proxy editor:pushEvent error:", err);
+        return false;
+      }
+    });
+
+    ipcMain.handle("editor:getText", async () => {
+      try {
+        const response = await fetch(`http://127.0.0.1:${PORT}/api/editor/getText`);
+        const data = (await response.json()) as { text: string };
+        return data.text;
+      } catch (err) {
+        // Suppress continuous console spam in dev if server is restarting, but log errors
+        console.error("[5080 Electron] Dev proxy editor:getText error:", err);
+        return "";
+      }
+    });
+  }
 }
 
 // ── Server Bootstrap ──────────────────────────────────────────────────────

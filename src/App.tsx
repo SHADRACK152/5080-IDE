@@ -1229,6 +1229,50 @@ export default function App() {
     }
   }, [activeThemeId, logOutput]);
 
+  // ── Custom Asynchronous Prompt Modal ─────────────────────────────────────
+  const [promptState, setPromptState] = useState<{
+    isOpen: boolean;
+    title: string;
+    placeholder: string;
+    defaultValue: string;
+    inputValue: string;
+    resolve: ((value: string | null) => void) | null;
+  }>({
+    isOpen: false,
+    title: "",
+    placeholder: "",
+    defaultValue: "",
+    inputValue: "",
+    resolve: null,
+  });
+
+  const showPrompt = useCallback((title: string, placeholder = "", defaultValue = ""): Promise<string | null> => {
+    return new Promise((resolve) => {
+      setPromptState({
+        isOpen: true,
+        title,
+        placeholder,
+        defaultValue,
+        inputValue: defaultValue,
+        resolve,
+      });
+    });
+  }, []);
+
+  const handlePromptConfirm = () => {
+    if (promptState.resolve) {
+      promptState.resolve(promptState.inputValue);
+    }
+    setPromptState((prev) => ({ ...prev, isOpen: false, resolve: null }));
+  };
+
+  const handlePromptCancel = () => {
+    if (promptState.resolve) {
+      promptState.resolve(null);
+    }
+    setPromptState((prev) => ({ ...prev, isOpen: false, resolve: null }));
+  };
+
   // ── Welcome Screen state (shown on first open when no folder) ────────────
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -1240,7 +1284,7 @@ export default function App() {
       folderPath = await (window as any).electronAPI.dialog.openFolder();
     } else {
       // Web fallback — prompt
-      folderPath = prompt("Enter the full path to the folder you want to open:");
+      folderPath = await showPrompt("Enter the full path to the folder you want to open:");
     }
 
     if (!folderPath) return;
@@ -1551,16 +1595,19 @@ export default function App() {
     }
   };
 
-  const handleCloneRepository = useCallback(async (repoUrl: string) => {
-    if (!repoUrl || !repoUrl.trim()) return;
+  const handleCloneRepository = useCallback(async (repoUrl?: string) => {
+    let finalRepoUrl = repoUrl;
+    if (!finalRepoUrl || !finalRepoUrl.trim()) {
+      finalRepoUrl = await showPrompt("Enter Git Repository URL to clone (e.g., https://github.com/username/project.git):") || "";
+    }
+    if (!finalRepoUrl || !finalRepoUrl.trim()) return;
 
     let parentDir = "";
     if (isElectron) {
       logOutput("Prompting for directory to clone repository into...");
       parentDir = await (window as any).electronAPI.dialog.openFolder() || "";
     } else {
-      parentDir = prompt("Enter absolute path of parent directory to clone into (or leave blank for current directory):") || "";
-      if (parentDir === null) return;
+      parentDir = await showPrompt("Enter absolute path of parent directory to clone into (or leave blank for current directory):") || "";
     }
 
     const workspacePath = parentDir.trim() || workspaceInfo?.workspace || "";
@@ -1569,10 +1616,10 @@ export default function App() {
       return;
     }
 
-    const repoName = repoUrl.split("/").pop()?.replace(/\.git$/, "") || "cloned-repo";
+    const repoName = finalRepoUrl.split("/").pop()?.replace(/\.git$/, "") || "cloned-repo";
     const targetPath = `${workspacePath.replace(/[\\/]$/, "")}/${repoName}`;
 
-    logOutput(`Cloning ${repoUrl} into ${targetPath}...`);
+    logOutput(`Cloning ${finalRepoUrl} into ${targetPath}...`);
     setBottomPanelTab("terminal");
     setIsBottomPanelVisible(true);
 
@@ -1581,7 +1628,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          command: `git clone "${repoUrl}" "${targetPath}"`,
+          command: `git clone "${finalRepoUrl}" "${targetPath}"`,
           cwd: workspacePath
         }),
       });
@@ -1613,14 +1660,14 @@ export default function App() {
     } catch (err: any) {
       logOutput(`Cloning aborted: ${err.message}`);
     }
-  }, [isElectron, workspaceInfo]);
+  }, [isElectron, workspaceInfo, showPrompt]);
 
-  const handleNewFileWelcome = useCallback(() => {
-    const filename = prompt("Enter a filename under the root workspace directory (e.g., index.js):");
+  const handleNewFileWelcome = useCallback(async () => {
+    const filename = await showPrompt("Enter a filename under the root workspace directory (e.g., index.js):");
     if (filename && filename.trim()) {
       handleAddFile("", filename.trim());
     }
-  }, [handleAddFile]);
+  }, [handleAddFile, showPrompt]);
 
   const handleAddFolder = async (parentPath: string, name: string) => {
     try {
@@ -2173,14 +2220,14 @@ export default function App() {
         onClose={handleExitIDE}
         onGoToHome={() => setActiveTabId(null)}
         onCloseFolder={handleCloseFolder}
-        onNewFile={() => {
-          const filename = prompt("Enter a filename under the root workspace directory (e.g., config.json):");
+        onNewFile={async () => {
+          const filename = await showPrompt("Enter a filename under the root workspace directory (e.g., config.json):");
           if (filename && filename.trim()) {
             handleAddFile("", filename.trim());
           }
         }}
-        onNewFolder={() => {
-          const foldername = prompt("Enter a folder name under the root workspace directory:");
+        onNewFolder={async () => {
+          const foldername = await showPrompt("Enter a folder name under the root workspace directory:");
           if (foldername && foldername.trim()) {
             handleAddFolder("", foldername.trim());
           }
@@ -2437,6 +2484,57 @@ export default function App() {
           >
             Exit Focus Mode
           </button>
+        </div>
+      )}
+
+      {/* 7. Unified Interactive Custom Prompt Dialog Modal */}
+      {promptState.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div 
+            className="bg-[#03171e]/95 border border-[#0ea5e9]/20 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 flex flex-col gap-4 transform transition-all duration-200 scale-100"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handlePromptConfirm();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                handlePromptCancel();
+              }
+            }}
+          >
+            <div>
+              <h3 className="text-[10px] font-bold text-sky-400 font-sans tracking-widest uppercase">
+                System Prompt Request
+              </h3>
+              <p className="text-xs text-zinc-200 font-sans font-medium mt-1">
+                {promptState.title}
+              </p>
+            </div>
+            
+            <input
+              type="text"
+              autoFocus
+              value={promptState.inputValue}
+              onChange={(e) => setPromptState(prev => ({ ...prev, inputValue: e.target.value }))}
+              placeholder={promptState.placeholder}
+              className="w-full bg-[#041c24] border border-teal-950/60 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-sky-500/80 transition-all font-sans"
+            />
+            
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <button
+                onClick={handlePromptCancel}
+                className="px-3.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold font-sans cursor-pointer transition-all active:scale-[0.97]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePromptConfirm}
+                className="px-3.5 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold font-sans cursor-pointer transition-all active:scale-[0.97]"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

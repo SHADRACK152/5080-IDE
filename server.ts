@@ -102,6 +102,27 @@ app.post("/api/workspace/set", (req, res) => {
   }
 });
 
+const EXCLUDED_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "dist-electron",
+  ".DS_Store",
+  ".venv",
+  "venv",
+  "env",
+  ".env",
+  "build",
+  "release",
+  "out",
+  ".next",
+  "target",
+  ".gemini",
+  ".idea",
+  ".vscode",
+  "__pycache__"
+]);
+
 // Helper function to resolve paths safely
 function resolvePath(safePath: string): string {
   if (!safePath) return WORKSPACE_ROOT;
@@ -128,7 +149,7 @@ app.get("/api/fs/tree", (req, res) => {
         const items = fs.readdirSync(dir);
         const nodes = items
           .filter(item => {
-            return item !== "node_modules" && item !== ".git" && item !== "dist" && item !== ".DS_Store";
+            return !EXCLUDED_DIRS.has(item);
           })
           .map(name => {
             const fullPath = path.join(dir, name);
@@ -397,7 +418,7 @@ app.post("/api/search", (req, res) => {
     function scanDirectory(dir: string) {
       const items = fs.readdirSync(dir);
       for (const item of items) {
-        if (item === "node_modules" || item === ".git" || item === "dist" || item === ".DS_Store") {
+        if (EXCLUDED_DIRS.has(item)) {
           continue;
         }
 
@@ -1151,6 +1172,13 @@ export async function startServer() {
     try {
       // @ts-ignore
       const { ipcMain } = await import("electron");
+      ipcMain.handle("editor:init", async (_event: any, content: string) => {
+        if (editorCoreInstance) {
+          editorCoreInstance.init(content || "");
+          return true;
+        }
+        return false;
+      });
       ipcMain.handle("editor:pushEvent", async (_event: any, payload: any) => {
         return editorCoreInstance ? editorCoreInstance.pushEvent(payload) : false;
       });

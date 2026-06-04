@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState } from "react";
-import Editor, { Monaco } from "@monaco-editor/react";
+import Editor, { Monaco, loader } from "@monaco-editor/react";
 import { File, X, Play, Code, CheckCircle, Smartphone, MapPin, Sparkles, Folder, FolderOpen, ChevronRight, Home } from "lucide-react";
 import { EditorTab, WorkspaceSettings, FileNode } from "../types";
 import WelcomeScreen from "./WelcomeScreen";
+
+// Configure monaco-editor to load assets locally for speed and offline usage
+loader.config({ paths: { vs: "./vs" } });
 
 interface EditorAreaProps {
   tabs: EditorTab[];
@@ -596,9 +599,8 @@ export default function EditorArea({
             onChange={(val) => onContentChange(activeTab.id, val || "")}
             onMount={handleEditorDidMount}
             loading={
-              <div className="flex flex-col justify-center items-center w-full h-full text-zinc-400 gap-2 flex-1 animate-pulse select-none">
-                <Sparkles className="w-7 h-7 text-cyan-500 animate-spin" />
-                <span className="text-xs font-semibold">Configuring Editor Sandbox Workspace...</span>
+              <div className="flex flex-col justify-center items-center w-full h-full bg-[#1e1e1e] text-zinc-500 flex-1 select-none">
+                <div className="w-5 h-5 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
               </div>
             }
             options={{

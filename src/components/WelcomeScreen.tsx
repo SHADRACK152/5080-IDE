@@ -29,7 +29,7 @@ interface WelcomeScreenProps {
   onOpenFolder: () => void;
   onNewProject: () => void;
   onOpenRecentWorkspace: (path: string) => void;
-  onCloneRepository?: (url: string) => void;
+  onCloneRepository?: (url?: string) => void;
   onNewFile?: () => void;
   workspaceName?: string;
   currentUser?: UserProfile | null;
@@ -38,34 +38,34 @@ interface WelcomeScreenProps {
 const QUICKSTART_TASKS = [
   {
     icon: FolderOpen,
-    label: "Open Folder",
-    description: "Browse and open any directory on your system",
+    label: "Open Local Project Folder",
+    description: "Select a folder from your desktop workspace directory",
     action: "openFolder",
-    color: "#0ea5e9", // Sky accent
+    color: "from-sky-500/20 to-sky-600/5 hover:border-sky-500/40 text-sky-400",
     shortcut: "Ctrl+K Ctrl+O",
   },
   {
-    icon: FolderPlus,
-    label: "New Project",
-    description: "Scaffold a new React, Node.js or Python environment",
+    icon: Plus,
+    label: "Scaffold New Project Blueprint",
+    description: "Create clean workspaces using template configurations",
     action: "newProject",
-    color: "#0e9cb2", // Teal accent
+    color: "from-teal-500/20 to-teal-600/5 hover:border-teal-500/40 text-teal-400",
     shortcut: "Ctrl+Shift+N",
   },
   {
-    icon: GitBranch,
-    label: "Clone Repository",
-    description: "Clone a Git repository from remote URL",
+    icon: Globe,
+    label: "Clone Remote Repository (Git)",
+    description: "Clone a public/private Git project directly to disk",
     action: "clone",
-    color: "#a855f7", // Purple accent
+    color: "from-emerald-500/20 to-emerald-600/5 hover:border-emerald-500/40 text-emerald-400",
     shortcut: "",
   },
   {
     icon: FileCode,
-    label: "New File",
-    description: "Create a blank workspace text file buffer",
+    label: "Create New Scratch File buffer",
+    description: "Start typing standard code modules instantly",
     action: "newFile",
-    color: "#fbbf24", // Yellow accent
+    color: "from-cyan-500/20 to-cyan-600/5 hover:border-cyan-500/40 text-cyan-400",
     shortcut: "Ctrl+N",
   },
 ];
@@ -93,10 +93,7 @@ export default function WelcomeScreen({
     if (action === "openFolder") onOpenFolder();
     else if (action === "newProject") onNewProject();
     else if (action === "clone" && onCloneRepository) {
-      const url = prompt("Enter Git Repository URL to clone (e.g., https://github.com/username/project.git):");
-      if (url && url.trim()) {
-        onCloneRepository(url.trim());
-      }
+      onCloneRepository();
     } else if (action === "newFile" && onNewFile) {
       onNewFile();
     }
@@ -131,9 +128,11 @@ export default function WelcomeScreen({
       {/* Header Banner */}
       <div className="p-8 px-12 border-b border-[var(--theme-sidebar-border)] bg-gradient-to-r from-[var(--theme-activitybar-bg)]/20 via-transparent to-transparent flex items-center justify-between shrink-0 relative z-10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#0e9cb2] to-[#0ea5e9] flex items-center justify-center shadow-lg shadow-sky-950/40 text-white font-extrabold text-sm select-none">
-            5080
-          </div>
+          <img
+            src="/5080_logo.png"
+            alt="5080 Logo"
+            className="w-12 h-12 rounded-xl object-contain shadow-lg shadow-sky-950/40 select-none bg-black/20 p-1"
+          />
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
               5080 Workspace Cockpit
